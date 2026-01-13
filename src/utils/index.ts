@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { RouteObject } from 'react-router';
+import  { type ReactNode } from 'react';
+import { type RouteObject } from 'react-router';
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

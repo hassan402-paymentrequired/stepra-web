@@ -1,9 +1,7 @@
 import { useRouteError, isRouteErrorResponse, useNavigate, useLocation } from 'react-router';
-import { DefaultLayout } from '@/components/layouts';
-import { AlertTriangle } from 'react-feather';
 import { Button } from '../ui';
-import { Divider } from 'antd';
 import { useEffect } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 const ErrorBoundaryFallback = () => {
   const error: any = useRouteError();
@@ -25,34 +23,33 @@ const ErrorBoundaryFallback = () => {
   }, [error?.message]);
 
   return (
-    <DefaultLayout offwhite footer={false}>
-      <div className="text-center flex flex-col align-middle justify-center items-center gap-2 min-h-[50vh]">
-        <div className="text-center flex align-middle items-center gap-2">
-          <h3 className="text-2xl mb-0 text-red">
-            <AlertTriangle size={32} />
-          </h3>
-          <Divider type="vertical" style={{ borderColor: '#bbb', height: '48px' }} />
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="text-center flex flex-col items-center gap-4 max-w-md">
+        <div className="flex items-center gap-3">
+          <AlertTriangle className="h-8 w-8 text-destructive" />
+          <div className="h-12 w-px bg-border" />
+          <div className="text-left">
+            {isRouteErrorResponse(error) && (
+              <div>
+                <p className="text-lg font-semibold">{error.status}</p>
+                <code className="text-sm text-muted-foreground">{error.statusText}</code>
+              </div>
+            )}
 
-          {isRouteErrorResponse(error) && (
-            <p className=" text-zinc-800 text-sm mb-0 text-left">
-              <span className="text-base pb-1 font-semibold block">{error.status}</span>
-              <code>{error.statusText}</code>
-            </p>
-          )}
-
-          {!isRouteErrorResponse(error) && (
-            <p className=" text-zinc-800 text-sm mb-0 text-left">
-              <span className="text-base pb-1 font-semibold block">Something went wrong.</span>
-              <code>{error?.message || String(error)}</code>
-            </p>
-          )}
+            {!isRouteErrorResponse(error) && (
+              <div>
+                <p className="text-lg font-semibold">Something went wrong.</p>
+                <code className="text-sm text-muted-foreground">{error?.message || String(error)}</code>
+              </div>
+            )}
+          </div>
         </div>
 
-        <Button type="primary" onClick={reloadPage} className=" mt-8 py-5">
-          <span>Reload Page</span>
+        <Button onClick={reloadPage} className="mt-4">
+          Reload Page
         </Button>
       </div>
-    </DefaultLayout>
+    </div>
   );
 };
 

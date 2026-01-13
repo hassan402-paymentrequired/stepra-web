@@ -1,4 +1,7 @@
 import { lazy } from 'react';
 
-export const Authenticate = lazy(() => import('./auth'));
 export const Home = lazy(() => import('./home'));
+export const Login = lazy(() => import('./auth/login'));
+export const Register = lazy(() => import('./auth/register'));
+export const VerifyEmail = lazy(() => import('./auth/verify-email'));
+export const ForgotPassword = lazy(() => import('./auth/forgot-password'));

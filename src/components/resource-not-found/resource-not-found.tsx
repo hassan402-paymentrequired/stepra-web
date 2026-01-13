@@ -19,7 +19,7 @@ const ResourceNotFound: FC<ResourceNotFoundProps> = ({ title, subTitle }) => {
         <h3 className="text-green-dark text-xl mb-0 inline-block">{title}</h3>
         <p className=" text-zinc-500 text-sm mb-0 inline-block">{subTitle}</p>
 
-        <Button className="mt-6" type="primary" onClick={() => navigate(-1)}>
+        <Button className="mt-6" variant="default" onClick={() => navigate(-1)}>
           Go Back
         </Button>
       </div>

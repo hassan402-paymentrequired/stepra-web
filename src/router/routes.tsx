@@ -1,7 +1,5 @@
-import { RouteObject } from 'react-router';
-import {
-  Home
-} from '@/pages';
+import type { RouteObject } from 'react-router';
+import { Home, Login, Register, VerifyEmail, ForgotPassword } from '@/pages';
 import { ErrorBoundaryFallback } from '../components/error-boundary-fallback';
 import { injectErrorBoundary } from '@/utils';
 import GuestRoute from './guest-route';
@@ -17,8 +15,20 @@ const routesObject: RouteObject[] = [
     element: <GuestRoute />,
     children: [
       {
-        path: '/authenticate',
-        element: <Authenticate />,
+        path: 'login',
+        element: <Login />,
+      },
+      {
+        path: 'register',
+        element: <Register />,
+      },
+      {
+        path: 'verify-email',
+        element: <VerifyEmail />,
+      },
+      {
+        path: 'forgot-password',
+        element: <ForgotPassword />,
       },
     ],
   },
@@ -26,28 +36,12 @@ const routesObject: RouteObject[] = [
     path: '/',
     element: <ProtectedRoute />,
     children: [
-      {
-        path: '/dashboard',
-        element: <Dashboard />,
-      },
-      {
-        path: '/manage/property-managers',
-        children: [
-          {
-            path: '/manage/property-managers',
-            element: <PropertyManagers />,
-          },
-          {
-            path: ':id',
-            element: <PropertyManagersDetails />,
-          },
-        ],
-      },
+      // Protected routes will be added here as needed
     ],
   },
   {
     path: '*',
-    element: <>404</>,
+    element: <div>404 - Page Not Found</div>,
   },
 ];
 

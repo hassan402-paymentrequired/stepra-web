@@ -4,15 +4,28 @@ import { getSessionWithKey } from './cookies';
 import { removeWithRedirect } from './auth';
 
 const baseUrl = import.meta.env.VITE_BASE_URL ?? 'http://localhost:8000/api';
-const token = getSessionWithKey('token');
 
 const instance = axios.create({
   baseURL: baseUrl,
+  headers: {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  },
 });
 
-if (token != null && !isEmpty(token)) {
-  instance.defaults.headers.common.Authorization = `Bearer ${token}`;
-}
+// Request interceptor to add token dynamically
+instance.interceptors.request.use(
+  (config) => {
+    const token = getSessionWithKey('token');
+    if (token != null && !isEmpty(token)) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 const onResponseSuccess = (response: any) => {
   return Promise.resolve(response);
@@ -20,12 +33,13 @@ const onResponseSuccess = (response: any) => {
 
 const onResponseFail = async (error: any) => {
   if (error?.response?.status === 401) {
+    const token = getSessionWithKey('token');
     if (token) {
       removeWithRedirect();
     }
   }
 
-  return Promise.reject(error?.response);
+  return Promise.reject(error?.response || error);
 };
 
 const getUrl = (url: string): string => `${url}`;
