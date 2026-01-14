@@ -1,5 +1,14 @@
 import type { RouteObject } from 'react-router';
-import { Home, Login, Register, VerifyEmail, ForgotPassword } from '@/pages';
+import {
+  Home,
+  Login,
+  Register,
+  VerifyEmail,
+  ForgotPassword,
+  JAMBModeSelection,
+  JAMBPastQuestionsSelection,
+  JAMBPracticeQuestionsSelection,
+} from '@/pages';
 import { ErrorBoundaryFallback } from '../components/error-boundary-fallback';
 import { injectErrorBoundary } from '@/utils';
 import GuestRoute from './guest-route';
@@ -36,7 +45,18 @@ const routesObject: RouteObject[] = [
     path: '/',
     element: <ProtectedRoute />,
     children: [
-      // Protected routes will be added here as needed
+      {
+        path: 'jamb/mode-selection',
+        element: <JAMBModeSelection />,
+      },
+      {
+        path: 'jamb/past-questions',
+        element: <JAMBPastQuestionsSelection />,
+      },
+      {
+        path: 'jamb/practice-questions',
+        element: <JAMBPracticeQuestionsSelection />,
+      },
     ],
   },
   {
