@@ -1,9 +1,9 @@
-import { FC } from 'react';
+import { type FC } from 'react';
 import { Link } from '@/components/ui';
-import { LogoProps } from './types';
+import { type LogoProps } from './types';
 
 const Logo: FC<LogoProps> = ({ to = '#', variant = 'logo', ...props }) => {
-  let logoUrl = '/logo.png';
+  let logoUrl = '/vite.svg';
 
   if (variant === 'logomark') logoUrl = '/logomark.png';
 

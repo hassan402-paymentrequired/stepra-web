@@ -84,7 +84,7 @@ const registerFn = async (data: {
   throw new Error(response.message || 'Registration failed');
 };
 
-const logoutFn = async (): Promise<void> => {
+const logoutFn = async (_?: void): Promise<void> => {
   try {
     await logout();
   } catch (error) {
