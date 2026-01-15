@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
 import AppLayout from "@/components/layouts/app-layout";
-import { Button, Input } from "@/components/ui";
+import { Button } from "@/components/ui";
 import {
   getSubscriptionPlans,
   getSubscriptionStatus,
@@ -21,8 +20,7 @@ import {
 import type { AxiosError } from "axios";
 
 const Subscription = () => {
-  const navigate = useNavigate();
-  const { data: user, refetch: refetchUser } = useUser();
+  const { refetch: refetchUser } = useUser();
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
@@ -164,8 +162,8 @@ const Subscription = () => {
 
   return (
     <AppLayout>
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto p-6">
+      <div className="w-full">
+        <div className="max-w-4xl mx-auto">
           {/* Current Status */}
           {hasActiveSubscription && status?.subscription && (
             <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6 mb-6">
@@ -260,7 +258,6 @@ const Subscription = () => {
                       </>
                     )}
                   </Button>
-                </>
               )}
 
               {hasActiveSubscription && (

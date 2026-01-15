@@ -99,7 +99,10 @@ const Referral = () => {
   const handleWithdrawal = async () => {
     if (!referralData) return;
 
-    if (!withdrawalForm.phone_number || withdrawalForm.phone_number.length < 10) {
+    if (
+      !withdrawalForm.phone_number ||
+      withdrawalForm.phone_number.length < 10
+    ) {
       alert("Please enter a valid phone number");
       return;
     }
@@ -155,7 +158,9 @@ const Referral = () => {
       <AppLayout>
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <p className="text-destructive mb-4">Failed to load referral data</p>
+            <p className="text-destructive mb-4">
+              Failed to load referral data
+            </p>
             <Button onClick={() => navigate("/")}>Go Back</Button>
           </div>
         </div>
@@ -165,8 +170,8 @@ const Referral = () => {
 
   return (
     <AppLayout>
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto p-6">
+      <div className="w-full">
+        <div className="max-w-5xl mx-auto">
           {/* Success Message */}
           {withdrawalSuccess && (
             <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
@@ -184,9 +189,11 @@ const Referral = () => {
               <div className="flex items-center gap-3">
                 <Wallet className="h-8 w-8 text-primary" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Credit Balance</p>
+                  <p className="text-sm text-muted-foreground">
+                    Credit Balance
+                  </p>
                   <p className="text-3xl font-bold">
-                    ₦{referralData.credit_balance.toLocaleString()}
+                    ₦{referralData?.credit_balance?.toLocaleString() || 0}
                   </p>
                 </div>
               </div>
@@ -218,7 +225,7 @@ const Referral = () => {
             <div className="flex items-center gap-3 mb-4">
               <div className="flex-1 border-2 border-primary rounded-lg p-4 bg-primary/5">
                 <p className="text-2xl font-bold text-center tracking-wider">
-                  {referralData.referral_code}
+                  {referralData?.referral_code || ""}
                 </p>
               </div>
               <Button
@@ -244,27 +251,29 @@ const Referral = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-card border rounded-lg p-4 text-center">
               <Users className="h-8 w-8 text-primary mx-auto mb-2" />
-              <p className="text-2xl font-bold">{referralData.statistics.total_referrals}</p>
+              <p className="text-2xl font-bold">
+                {referralData?.statistics?.total_referrals || 0}
+              </p>
               <p className="text-sm text-muted-foreground">Total Referrals</p>
             </div>
             <div className="bg-card border rounded-lg p-4 text-center">
               <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-2" />
               <p className="text-2xl font-bold text-green-600">
-                {referralData.statistics.active_referrals}
+                {referralData?.statistics?.active_referrals || 0}
               </p>
               <p className="text-sm text-muted-foreground">Active</p>
             </div>
             <div className="bg-card border rounded-lg p-4 text-center">
               <Clock className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
               <p className="text-2xl font-bold text-yellow-600">
-                {referralData.statistics.pending_referrals}
+                {referralData?.statistics?.pending_referrals || 0}
               </p>
               <p className="text-sm text-muted-foreground">Pending</p>
             </div>
             <div className="bg-card border rounded-lg p-4 text-center">
               <Wallet className="h-8 w-8 text-primary mx-auto mb-2" />
               <p className="text-2xl font-bold">
-                ₦{referralData.statistics.total_rewards.toLocaleString()}
+                ₦{referralData?.statistics?.total_rewards?.toLocaleString() || 0}
               </p>
               <p className="text-sm text-muted-foreground">Total Rewards</p>
             </div>
@@ -292,7 +301,8 @@ const Referral = () => {
                 <div>
                   <p className="font-medium">They sign up using your code</p>
                   <p className="text-sm text-muted-foreground">
-                    When they register using your referral code, you both benefit
+                    When they register using your referral code, you both
+                    benefit
                   </p>
                 </div>
               </div>
@@ -338,7 +348,9 @@ const Referral = () => {
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium">{referral.referred_user.name}</p>
+                        <p className="font-medium">
+                          {referral.referred_user.name}
+                        </p>
                         <p className="text-sm text-muted-foreground">
                           {referral.referred_user.email}
                         </p>
@@ -358,11 +370,13 @@ const Referral = () => {
                             : "bg-yellow-100 text-yellow-700"
                         }`}
                       >
-                        {referral.status === "rewarded" ? "Rewarded" : "Pending"}
+                        {referral.status === "rewarded"
+                          ? "Rewarded"
+                          : "Pending"}
                       </span>
                       {referral.reward_amount > 0 && (
                         <p className="text-sm font-semibold text-primary mt-1">
-                          ₦{referral.reward_amount.toLocaleString()}
+                          ₦{referral.reward_amount.toLocaleString() || 0}
                         </p>
                       )}
                     </div>

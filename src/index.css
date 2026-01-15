@@ -131,4 +131,23 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+  
+  /* Infinite scroll animation for leaderboard */
+  @keyframes scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-33.333%);
+    }
+  }
+  
+  .scroll-container {
+    animation: scroll 30s linear infinite;
+    width: max-content;
+  }
+  
+  .scroll-container:hover {
+    animation-play-state: paused;
+  }
 }

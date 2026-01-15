@@ -4,6 +4,7 @@ import AppLayout from '@/components/layouts/app-layout';
 import { Button } from '@/components/ui';
 import { getSubjects, getPracticeQuestions, getExams, startExamAttempt } from '@/apis/exam';
 import { useUser } from '@/lib/auth';
+import { getSubscriptionStatus } from '@/apis/subscription';
 import { Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils';
 import type { AxiosError } from 'axios';
@@ -19,11 +20,30 @@ const JAMBPracticeQuestionsSelection = () => {
   const [showQuestionCountModal, setShowQuestionCountModal] = useState(false);
   const [currentSubjectForQuestionCount, setCurrentSubjectForQuestionCount] = useState<string | null>(null);
   const [startingExam, setStartingExam] = useState(false);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
 
-  const hasActiveSubscription =
-    user?.subscription_status === 'active' &&
-    user?.subscription_expires_at &&
-    new Date(user.subscription_expires_at) > new Date();
+  // Fetch subscription status from API for accurate check
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const response = await getSubscriptionStatus();
+        if (response.success && response.data) {
+          setHasActiveSubscription(response.data.has_active_subscription || false);
+        }
+      } catch (error) {
+        // Fallback to user data check if API fails
+        const userHasActive =
+          user?.subscription_status === 'active' ||
+          (user?.subscription_expires_at &&
+            new Date(user.subscription_expires_at) > new Date());
+        setHasActiveSubscription(userHasActive || false);
+      }
+    };
+
+    if (user) {
+      checkSubscription();
+    }
+  }, [user]);
 
   const maxQuestionsPerSubject = hasActiveSubscription ? 100 : 5;
   const questionCountOptions = Array.from({ length: maxQuestionsPerSubject }, (_, i) => i + 1);
@@ -221,8 +241,8 @@ const JAMBPracticeQuestionsSelection = () => {
 
   return (
     <AppLayout>
-      <div className="w-full h-full overflow-y-auto">
-        <div className="max-w-4xl mx-auto p-6">
+      <div className="w-full">
+        <div className="max-w-5xl mx-auto">
           <div className="mb-6">
             <h1 className="text-3xl font-bold mb-2">Select Subjects</h1>
             <p className="text-muted-foreground">

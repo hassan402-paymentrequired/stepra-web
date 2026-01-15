@@ -1,4 +1,5 @@
-import { Breadcrumb, Layout, Menu, theme, Dropdown } from "antd";
+import { Breadcrumb, Layout, theme, Dropdown } from "antd";
+import { Link } from "react-router";
 import type { PropsWithChildren } from "react";
 import { useUser, useLogout } from "@/lib/auth";
 import { Logo } from "@/components/logo";
@@ -9,20 +10,6 @@ import { getStreaks, type StreakData } from "@/apis/streak";
 
 const { Header, Content, Footer } = Layout;
 
-const menuItems = [
-  {
-    key: "1",
-    label: "Home",
-  },
-  {
-    key: "2",
-    label: "Practice",
-  },
-  {
-    key: "3",
-    label: "Exams",
-  },
-];
 
 const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
   const {
@@ -139,6 +126,14 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
         items.push({ title: "Corrections" });
       }
     }
+    // Handle Referral route
+    else if (pathname === "/referral") {
+      items.push({ title: "Refer & Earn" });
+    }
+    // Handle Subscription route
+    else if (pathname === "/subscription") {
+      items.push({ title: "Subscription" });
+    }
     // Handle authentication routes (shouldn't show breadcrumb, but just in case)
     else if (pathname.startsWith("/authenticate/")) {
       if (pathname === "/authenticate/login") {
@@ -164,15 +159,12 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
           justifyContent: "space-between",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-          <Logo to="/" variant="logo" height={20} width={20} />
-          <Menu
-            theme="dark"
-            mode="horizontal"
-            defaultSelectedKeys={["1"]}
-            items={menuItems}
-            style={{ flex: 1, minWidth: 0 }}
-          />
+        <div
+          className="flex items-center gap-6 lg:gap-8"
+          style={{ display: "flex", alignItems: "center" }}
+        >
+          <Logo to="/" variant="logo" height={24} width={24} />
+          
         </div>
         {user && (
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -209,52 +201,41 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
         )}
       </Header>
       <Content
+        className="px-4 sm:px-8 lg:px-12 xl:px-16"
         style={{
-          padding: "0 48px",
-          height: "calc(100vh - 64px - 70px)",
-          overflow: "hidden",
+          minHeight: "calc(100vh - 64px - 70px)",
           display: "flex",
           flexDirection: "column",
+          paddingTop: "24px",
+          paddingBottom: "24px",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            margin: "16px 0",
-          }}
-        >
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <Breadcrumb
-            items={breadcrumbItems.map((item, index) => ({
-              title:
-                index === breadcrumbItems.length - 1 ? (
+            items={breadcrumbItems.map((item, index) => {
+              const isLast = index === breadcrumbItems.length - 1;
+              return {
+                title: isLast ? (
                   item.title
-                ) : (
-                  <a
-                    href={item.href || "#"}
-                    onClick={(e) => {
-                      if (item.href) {
-                        e.preventDefault();
-                        navigate(item.href);
-                      }
-                    }}
+                ) : item.href ? (
+                  <Link
+                    to={item.href}
+                    style={{ color: "inherit" }}
+                    className="hover:text-primary transition-colors"
                   >
                     {item.title}
-                  </a>
+                  </Link>
+                ) : (
+                  item.title
                 ),
-            }))}
+              };
+            })}
           />
           {user && streakData && (
             <div
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full border"
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "4px 12px",
                 background: colorBgContainer,
-                borderRadius: "16px",
-                border: "1px solid",
                 borderColor: colorBorder,
               }}
             >
@@ -264,7 +245,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
                   color: streakData.current_streak > 0 ? "#f59e0b" : "#9ca3af",
                 }}
               />
-              <span style={{ fontSize: "14px", fontWeight: 500 }}>
+              <span className="text-sm font-medium whitespace-nowrap">
                 {streakData.current_streak} day
                 {streakData.current_streak !== 1 ? "s" : ""} streak
               </span>
@@ -272,15 +253,12 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
           )}
         </div>
         <div
+          className="w-full"
           style={{
             background: colorBgContainer,
-            padding: 24,
+            padding: "32px",
             borderRadius: borderRadiusLG,
-            flex: 1,
-            overflow: "hidden",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            minHeight: 0,
           }}
         >
           {children}
