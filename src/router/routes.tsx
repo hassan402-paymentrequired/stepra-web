@@ -8,6 +8,7 @@ import {
   JAMBModeSelection,
   JAMBPastQuestionsSelection,
   JAMBPracticeQuestionsSelection,
+  DLIPracticeSelection,
   ExamScreen,
   ExamResults,
   ExamCorrections,
@@ -59,6 +60,10 @@ const routesObject: RouteObject[] = [
       {
         path: 'jamb/practice-questions',
         element: <JAMBPracticeQuestionsSelection />,
+      },
+      {
+        path: 'dli/practice',
+        element: <DLIPracticeSelection />,
       },
       {
         path: 'exam/screen',

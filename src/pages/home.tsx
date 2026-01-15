@@ -52,13 +52,16 @@ const Home = () => {
             </p>
           </div>
 
-          {/* Practice CLI Card */}
-          <div className="col-span-2 row-span-3 row-start-4 border rounded-lg bg-card p-6 flex flex-col items-center justify-center hover:shadow-lg transition-shadow cursor-pointer group">
+          {/* Practice DLI Card */}
+          <div
+            onClick={() => navigate("/dli/practice")}
+            className="col-span-2 row-span-3 row-start-4 border rounded-lg bg-card p-6 flex flex-col items-center justify-center hover:shadow-lg transition-shadow cursor-pointer group"
+          >
             <h2 className="text-2xl font-bold mb-2 group-hover:text-primary transition-colors">
-              Practice CLI
+              Practice DLI
             </h2>
             <p className="text-muted-foreground text-center">
-              Practice with CLI questions and enhance your skills
+              Practice with DLI questions and enhance your skills
             </p>
           </div>
 
