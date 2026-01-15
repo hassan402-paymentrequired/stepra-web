@@ -65,6 +65,7 @@ const Home = () => {
             </p>
           </div>
 
+
           {/* Leaderboard Section */}
           <div className="col-span-3 col-start-3 row-start-6 border rounded-lg bg-card p-3">
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">

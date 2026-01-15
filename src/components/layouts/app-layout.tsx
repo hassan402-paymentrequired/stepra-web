@@ -1,11 +1,11 @@
-import { Breadcrumb, Layout, Menu, theme } from "antd";
+import { Breadcrumb, Layout, Menu, theme, Dropdown } from "antd";
 import type { PropsWithChildren } from "react";
 import { useUser, useLogout } from "@/lib/auth";
 import { Logo } from "@/components/logo";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, CreditCard, Users, Flame } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
-import { Button } from "@/components/ui";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { getStreaks, type StreakData } from "@/apis/streak";
 
 const { Header, Content, Footer } = Layout;
 
@@ -26,18 +26,75 @@ const menuItems = [
 
 const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
   const {
-    token: { colorBgContainer, borderRadiusLG },
+    token: { colorBgContainer, borderRadiusLG, colorBorder },
   } = theme.useToken();
 
   const { data: user } = useUser();
   const logout = useLogout();
   const navigate = useNavigate();
   const location = useLocation();
+  const [streakData, setStreakData] = useState<StreakData | null>(null);
+
+  const fetchStreak = useCallback(async () => {
+    try {
+      const response = await getStreaks();
+      if (response.success) {
+        setStreakData(response.data);
+      }
+    } catch (error) {
+      // Silently fail - streak is not critical
+      console.error("Error fetching streak:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchStreak();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const handleLogout = async () => {
-    await logout.mutateAsync();
+    await logout.mutateAsync(undefined);
     navigate("/authenticate/login");
   };
+
+  const profileMenuItems = [
+    {
+      key: "subscription",
+      label: (
+        <div className="flex items-center gap-2">
+          <CreditCard className="h-4 w-4" />
+          <span>Subscribe</span>
+        </div>
+      ),
+      onClick: () => navigate("/subscription"),
+    },
+    {
+      key: "referral",
+      label: (
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          <span>Refer & Earn</span>
+        </div>
+      ),
+      onClick: () => navigate("/referral"),
+    },
+    {
+      type: "divider" as const,
+    },
+    {
+      key: "logout",
+      label: (
+        <div className="flex items-center gap-2">
+          <LogOut className="h-4 w-4" />
+          <span>Logout</span>
+        </div>
+      ),
+      onClick: handleLogout,
+      danger: true,
+    },
+  ];
 
   // Generate breadcrumb items based on current route
   const breadcrumbItems = useMemo(() => {
@@ -119,31 +176,35 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
         </div>
         {user && (
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                color: "white",
-              }}
+            <Dropdown
+              menu={{ items: profileMenuItems }}
+              trigger={["click"]}
+              placement="bottomRight"
             >
-              <User size={16} />
-              <span>{user.name}</span>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              disabled={logout.isPending}
-              style={{
-                background: "transparent",
-                borderColor: "rgba(255, 255, 255, 0.3)",
-                color: "white",
-              }}
-            >
-              <LogOut className="h-4 w-4" />
-              {logout.isPending ? "Logging out..." : "Logout"}
-            </Button>
+              <button
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  color: "white",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "4px 8px",
+                  borderRadius: "4px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    "rgba(255, 255, 255, 0.1)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+              >
+                <User size={16} />
+                <span>{user.name}</span>
+              </button>
+            </Dropdown>
           </div>
         )}
       </Header>
@@ -156,27 +217,60 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
           flexDirection: "column",
         }}
       >
-        <Breadcrumb
-          style={{ margin: "16px 0" }}
-          items={breadcrumbItems.map((item, index) => ({
-            title:
-              index === breadcrumbItems.length - 1 ? (
-                item.title
-              ) : (
-                <a
-                  href={item.href || "#"}
-                  onClick={(e) => {
-                    if (item.href) {
-                      e.preventDefault();
-                      navigate(item.href);
-                    }
-                  }}
-                >
-                  {item.title}
-                </a>
-              ),
-          }))}
-        />
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            margin: "16px 0",
+          }}
+        >
+          <Breadcrumb
+            items={breadcrumbItems.map((item, index) => ({
+              title:
+                index === breadcrumbItems.length - 1 ? (
+                  item.title
+                ) : (
+                  <a
+                    href={item.href || "#"}
+                    onClick={(e) => {
+                      if (item.href) {
+                        e.preventDefault();
+                        navigate(item.href);
+                      }
+                    }}
+                  >
+                    {item.title}
+                  </a>
+                ),
+            }))}
+          />
+          {user && streakData && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "4px 12px",
+                background: colorBgContainer,
+                borderRadius: "16px",
+                border: "1px solid",
+                borderColor: colorBorder,
+              }}
+            >
+              <Flame
+                size={16}
+                style={{
+                  color: streakData.current_streak > 0 ? "#f59e0b" : "#9ca3af",
+                }}
+              />
+              <span style={{ fontSize: "14px", fontWeight: 500 }}>
+                {streakData.current_streak} day
+                {streakData.current_streak !== 1 ? "s" : ""} streak
+              </span>
+            </div>
+          )}
+        </div>
         <div
           style={{
             background: colorBgContainer,

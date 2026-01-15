@@ -12,3 +12,5 @@ export const DLIPracticeSelection = lazy(() => import('./dli/practice-selection'
 export const ExamScreen = lazy(() => import('./exam/exam-screen'));
 export const ExamResults = lazy(() => import('./exam/exam-results'));
 export const ExamCorrections = lazy(() => import('./exam/exam-corrections'));
+export const Referral = lazy(() => import('./referral'));
+export const Subscription = lazy(() => import('./subscription'));

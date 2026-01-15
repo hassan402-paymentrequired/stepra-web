@@ -12,6 +12,8 @@ import {
   ExamScreen,
   ExamResults,
   ExamCorrections,
+  Referral,
+  Subscription,
 } from '@/pages';
 import { ErrorBoundaryFallback } from '../components/error-boundary-fallback';
 import { injectErrorBoundary } from '@/utils';
@@ -76,6 +78,14 @@ const routesObject: RouteObject[] = [
       {
         path: 'exam/corrections',
         element: <ExamCorrections />,
+      },
+      {
+        path: 'referral',
+        element: <Referral />,
+      },
+      {
+        path: 'subscription',
+        element: <Subscription />,
       },
     ],
   },
