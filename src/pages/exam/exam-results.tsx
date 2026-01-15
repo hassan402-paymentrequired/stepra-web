@@ -4,7 +4,7 @@ import AppLayout from "@/components/layouts/app-layout";
 import { Button } from "@/components/ui";
 import { getExamResults } from "@/apis/exam";
 import { getApiErrorMessage } from "@/utils";
-import { CheckCircle2, XCircle, BookOpen, ChevronRight } from "lucide-react";
+import { CheckCircle2, XCircle, BookOpen } from "lucide-react";
 import type { AxiosError } from "axios";
 
 interface QuestionResult {
