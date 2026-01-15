@@ -8,6 +8,9 @@ import {
   JAMBModeSelection,
   JAMBPastQuestionsSelection,
   JAMBPracticeQuestionsSelection,
+  ExamScreen,
+  ExamResults,
+  ExamCorrections,
 } from '@/pages';
 import { ErrorBoundaryFallback } from '../components/error-boundary-fallback';
 import { injectErrorBoundary } from '@/utils';
@@ -56,6 +59,18 @@ const routesObject: RouteObject[] = [
       {
         path: 'jamb/practice-questions',
         element: <JAMBPracticeQuestionsSelection />,
+      },
+      {
+        path: 'exam/screen',
+        element: <ExamScreen />,
+      },
+      {
+        path: 'exam/results',
+        element: <ExamResults />,
+      },
+      {
+        path: 'exam/corrections',
+        element: <ExamCorrections />,
       },
     ],
   },

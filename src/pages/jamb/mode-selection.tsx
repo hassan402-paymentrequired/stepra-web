@@ -1,15 +1,15 @@
-import { useNavigate } from 'react-router';
-import AppLayout from '@/components/layouts/app-layout';
-import { FileText, BookOpen } from 'lucide-react';
+import { useNavigate } from "react-router";
+import AppLayout from "@/components/layouts/app-layout";
+import { FileText, BookOpen } from "lucide-react";
 
 const JAMBModeSelection = () => {
   const navigate = useNavigate();
 
-  const handleSelectMode = (mode: 'past_question' | 'practice') => {
-    if (mode === 'past_question') {
-      navigate('/jamb/past-questions');
+  const handleSelectMode = (mode: "past_question" | "practice") => {
+    if (mode === "past_question") {
+      navigate("/jamb/past-questions");
     } else {
-      navigate('/jamb/practice-questions');
+      navigate("/jamb/practice-questions");
     }
   };
 
@@ -27,7 +27,7 @@ const JAMBModeSelection = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Past Questions Card */}
             <div
-              onClick={() => handleSelectMode('past_question')}
+              onClick={() => handleSelectMode("past_question")}
               className="border rounded-lg bg-card p-8 flex flex-col items-center justify-center hover:shadow-lg transition-all cursor-pointer group hover:border-primary"
             >
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
@@ -43,7 +43,7 @@ const JAMBModeSelection = () => {
 
             {/* Practice Questions Card */}
             <div
-              onClick={() => handleSelectMode('practice')}
+              onClick={() => handleSelectMode("practice")}
               className="border rounded-lg bg-card p-8 flex flex-col items-center justify-center hover:shadow-lg transition-all cursor-pointer group hover:border-primary"
             >
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">

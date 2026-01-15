@@ -14,10 +14,13 @@ export interface Exam {
 export interface Question {
   id: number;
   question_text: string;
-  question_type: string;
+  question_type: 'multiple_choice' | 'true_false' | 'text_input' | 'numeric_input';
   points: number;
   order: number;
-  answers: Answer[];
+  answers?: Answer[];
+  expected_answer?: string;
+  image_url?: string;
+  image_path?: string;
 }
 
 export interface Answer {
@@ -102,5 +105,38 @@ export const startExamAttempt = async (
   }
 ) => {
   const response = await api.post(`/exams/${examId}/start`, data);
+  return response.data;
+};
+
+export const submitAnswer = async (
+  attemptId: number,
+  data: {
+    question_id: number;
+    answer_id: number;
+    time_spent?: number;
+  }
+) => {
+  const response = await api.post(`/exam-attempts/${attemptId}/submit-answer`, data);
+  return response.data;
+};
+
+export const completeExamAttempt = async (
+  attemptId: number,
+  data?: {
+    subjects?: Array<{ subject: string; question_count: number }>;
+    duration_minutes?: number;
+  }
+) => {
+  const response = await api.post(`/exam-attempts/${attemptId}/complete`, data || {});
+  return response.data;
+};
+
+export const getExamAttempt = async (attemptId: number) => {
+  const response = await api.get(`/exam-attempts/${attemptId}`);
+  return response.data;
+};
+
+export const getExamResults = async (attemptId: number) => {
+  const response = await api.get(`/exam-attempts/${attemptId}/results`);
   return response.data;
 };

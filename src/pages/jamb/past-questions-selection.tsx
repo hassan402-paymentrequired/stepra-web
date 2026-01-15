@@ -241,8 +241,22 @@ const JAMBPastQuestionsSelection = () => {
         return;
       }
 
-      // TODO: Navigate to exam screen
-      alert('Exam started! (Exam screen will be implemented next)');
+      // Navigate to exam screen
+      navigate('/exam/screen', {
+        state: {
+          attemptId: attemptResponse.data.attempt.id,
+          examId: firstExamId,
+          subjectsQuestions: subjectsQuestions,
+          exam: {
+            id: firstExamId,
+            title: `JAMB ${selectedSubjects.join(', ')} Past Questions`,
+            duration: timeMinutesNum,
+            total_questions: totalQuestions,
+          },
+          timeMinutes: timeMinutesNum,
+          subjects: selectedSubjects,
+        },
+      });
     } catch (error) {
       const errorMessage = getApiErrorMessage(error as AxiosError);
       alert(`Error: ${errorMessage}`);
