@@ -85,12 +85,6 @@ const ExamResults = () => {
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
-  };
-
   const getGradeColor = (percentage: number) => {
     if (percentage >= 70) return "text-green-600";
     if (percentage >= 50) return "text-yellow-600";
