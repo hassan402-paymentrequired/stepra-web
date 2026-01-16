@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useUser } from "@/lib/auth";
 import AppLayout from "@/components/layouts/app-layout";
@@ -10,19 +10,7 @@ const Home = () => {
   const { data: user, isLoading } = useUser();
   const [topPerformers, setTopPerformers] = useState<LeaderboardUser[]>([]);
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      navigate("/authenticate/login");
-    }
-  }, [user, isLoading, navigate]);
-
-  useEffect(() => {
-    fetchTopPerformers();
-  }, []);
-
-  // No need for JavaScript scroll animation - using CSS animation instead
-
-  const fetchTopPerformers = async () => {
+  const fetchTopPerformers = useCallback(async () => {
     try {
       const response = await getLeaderboard({
         type: 'all_time',
@@ -38,7 +26,19 @@ const Home = () => {
       // Set some mock data for now if API fails
       setTopPerformers([]);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate("/authenticate/login");
+    }
+  }, [user, isLoading, navigate]);
+
+  useEffect(() => {
+    fetchTopPerformers();
+  }, [fetchTopPerformers]);
+
+  // No need for JavaScript scroll animation - using CSS animation instead
 
   if (isLoading) {
     return (

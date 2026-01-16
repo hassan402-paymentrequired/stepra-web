@@ -14,3 +14,4 @@ export const ExamResults = lazy(() => import('./exam/exam-results'));
 export const ExamCorrections = lazy(() => import('./exam/exam-corrections'));
 export const Referral = lazy(() => import('./referral'));
 export const Subscription = lazy(() => import('./subscription'));
+export const Profile = lazy(() => import('./profile'));

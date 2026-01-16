@@ -14,6 +14,7 @@ import {
   ExamCorrections,
   Referral,
   Subscription,
+  Profile,
 } from '@/pages';
 import { ErrorBoundaryFallback } from '../components/error-boundary-fallback';
 import { injectErrorBoundary } from '@/utils';
@@ -86,6 +87,10 @@ const routesObject: RouteObject[] = [
       {
         path: 'subscription',
         element: <Subscription />,
+      },
+      {
+        path: 'profile',
+        element: <Profile />,
       },
     ],
   },

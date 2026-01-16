@@ -87,6 +87,19 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
 
   const profileMenuItems = [
     {
+      key: "profile",
+      label: (
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4" />
+          <span>Profile</span>
+        </div>
+      ),
+      onClick: () => navigate("/profile"),
+    },
+    {
+      type: "divider" as const,
+    },
+    {
       key: "subscription",
       label: (
         <div className="flex items-center gap-2">
@@ -172,6 +185,10 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
     // Handle Subscription route
     else if (pathname === "/subscription") {
       items.push({ title: "Subscription" });
+    }
+    // Handle Profile route
+    else if (pathname === "/profile") {
+      items.push({ title: "Profile" });
     }
     // Handle authentication routes (shouldn't show breadcrumb, but just in case)
     else if (pathname.startsWith("/authenticate/")) {
@@ -353,7 +370,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
                           hasStreak ? " - Practiced" : ""
                         }`}
                       >
-                        <span
+                        {/* <span
                           className="text-xs font-medium"
                           style={{
                             color: isToday
@@ -364,7 +381,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
                           }}
                         >
                           {day.dayAbbr}
-                        </span>
+                        </span> */}
                         <span
                           className="text-xs font-semibold"
                           style={{
