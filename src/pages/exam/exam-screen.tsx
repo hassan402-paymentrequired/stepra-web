@@ -35,9 +35,9 @@ const ExamScreen = () => {
   const location = useLocation();
   const state = location.state as ExamScreenLocationState;
 
-  const [subjectsQuestions, setSubjectsQuestions] = useState<
-    Record<string, Question[]>
-  >(state?.subjectsQuestions || {});
+  const [subjectsQuestions] = useState<Record<string, Question[]>>(
+    state?.subjectsQuestions || {}
+  );
   const [currentSubject, setCurrentSubject] = useState<string>(
     state?.subjects?.[0] || Object.keys(subjectsQuestions)[0] || ""
   );
@@ -61,6 +61,16 @@ const ExamScreen = () => {
   ); // in seconds
   const [loading, setLoading] = useState(false);
   const [showSubjectModal, setShowSubjectModal] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [calculatorDisplay, setCalculatorDisplay] = useState("0");
+  const [calculatorPreviousValue, setCalculatorPreviousValue] = useState<
+    number | null
+  >(null);
+  const [calculatorOperation, setCalculatorOperation] = useState<string | null>(
+    null
+  );
+  const [calculatorWaitingForNewValue, setCalculatorWaitingForNewValue] =
+    useState(false);
   const [questionStartTime, setQuestionStartTime] = useState<
     Record<number, number>
   >({});
@@ -388,6 +398,40 @@ const ExamScreen = () => {
     });
   };
 
+  // Calculator functions
+  const calculateResult = useCallback((): number => {
+    const current = parseFloat(calculatorDisplay);
+    const previous = calculatorPreviousValue || 0;
+
+    switch (calculatorOperation) {
+      case "+":
+        return previous + current;
+      case "−":
+      case "-":
+        return previous - current;
+      case "×":
+      case "*":
+        return previous * current;
+      case "÷":
+      case "/":
+        return previous / current;
+      default:
+        return current;
+    }
+  }, [calculatorDisplay, calculatorPreviousValue, calculatorOperation]);
+
+  const handleCalculatorNumber = useCallback(
+    (num: string) => {
+      if (calculatorWaitingForNewValue) {
+        setCalculatorDisplay(num);
+        setCalculatorWaitingForNewValue(false);
+      } else {
+        setCalculatorDisplay((prev) => (prev === "0" ? num : prev + num));
+      }
+    },
+    [calculatorWaitingForNewValue]
+  );
+
   if (
     !state ||
     !subjectsQuestions ||
@@ -452,11 +496,9 @@ const ExamScreen = () => {
 
           <div className="flex items-center gap-4">
             <button
-              onClick={() => {
-                // TODO: Open calculator modal
-                alert("Calculator feature coming soon");
-              }}
-              className="p-2 hover:bg-muted rounded"
+              onClick={() => setShowCalculator(true)}
+              className="p-2 hover:bg-muted rounded transition-colors"
+              title="Calculator"
             >
               <Calculator className="h-5 w-5" />
             </button>
@@ -484,6 +526,262 @@ const ExamScreen = () => {
           {currentSubject})
         </p>
       </div>
+
+      {/* Calculator Modal */}
+      {showCalculator && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-xl shadow-2xl w-full max-w-sm border-2 border-border">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Calculator className="h-5 w-5" />
+                Calculator
+              </h3>
+              <button
+                onClick={() => setShowCalculator(false)}
+                className="p-1 hover:bg-muted rounded transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Display */}
+            <div className="p-6 bg-muted/30 border-b">
+              <div className="text-right">
+                <div className="text-4xl font-mono font-bold min-h-12 flex items-center justify-end break-all">
+                  {calculatorDisplay}
+                </div>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="p-4 grid grid-cols-4 gap-3">
+              {/* Row 1: Clear, Backspace, %, ÷ */}
+              <button
+                onClick={() => {
+                  setCalculatorDisplay("0");
+                  setCalculatorPreviousValue(null);
+                  setCalculatorOperation(null);
+                  setCalculatorWaitingForNewValue(false);
+                }}
+                className="p-4 bg-destructive/10 hover:bg-destructive/20 text-destructive font-semibold rounded-lg transition-colors"
+              >
+                C
+              </button>
+              <button
+                onClick={() => {
+                  if (calculatorDisplay.length > 1) {
+                    setCalculatorDisplay(calculatorDisplay.slice(0, -1));
+                  } else {
+                    setCalculatorDisplay("0");
+                  }
+                }}
+                className="p-4 bg-muted hover:bg-muted/80 font-semibold rounded-lg transition-colors"
+              >
+                ⌫
+              </button>
+              <button
+                onClick={() => {
+                  const value = parseFloat(calculatorDisplay) / 100;
+                  setCalculatorDisplay(value.toString());
+                }}
+                className="p-4 bg-muted hover:bg-muted/80 font-semibold rounded-lg transition-colors"
+              >
+                %
+              </button>
+              <button
+                onClick={() => {
+                  const current = parseFloat(calculatorDisplay);
+                  if (
+                    calculatorPreviousValue !== null &&
+                    calculatorOperation &&
+                    !calculatorWaitingForNewValue
+                  ) {
+                    const result = calculateResult();
+                    setCalculatorDisplay(result.toString());
+                    setCalculatorPreviousValue(result);
+                  } else {
+                    setCalculatorPreviousValue(current);
+                  }
+                  setCalculatorOperation("÷");
+                  setCalculatorWaitingForNewValue(true);
+                }}
+                className="p-4 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-lg transition-colors"
+              >
+                ÷
+              </button>
+
+              {/* Row 2: 7, 8, 9, × */}
+              <button
+                onClick={() => handleCalculatorNumber("7")}
+                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
+              >
+                7
+              </button>
+              <button
+                onClick={() => handleCalculatorNumber("8")}
+                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
+              >
+                8
+              </button>
+              <button
+                onClick={() => handleCalculatorNumber("9")}
+                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
+              >
+                9
+              </button>
+              <button
+                onClick={() => {
+                  const current = parseFloat(calculatorDisplay);
+                  if (
+                    calculatorPreviousValue !== null &&
+                    calculatorOperation &&
+                    !calculatorWaitingForNewValue
+                  ) {
+                    const result = calculateResult();
+                    setCalculatorDisplay(result.toString());
+                    setCalculatorPreviousValue(result);
+                  } else {
+                    setCalculatorPreviousValue(current);
+                  }
+                  setCalculatorOperation("×");
+                  setCalculatorWaitingForNewValue(true);
+                }}
+                className="p-4 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-lg transition-colors"
+              >
+                ×
+              </button>
+
+              {/* Row 3: 4, 5, 6, - */}
+              <button
+                onClick={() => handleCalculatorNumber("4")}
+                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
+              >
+                4
+              </button>
+              <button
+                onClick={() => handleCalculatorNumber("5")}
+                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
+              >
+                5
+              </button>
+              <button
+                onClick={() => handleCalculatorNumber("6")}
+                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
+              >
+                6
+              </button>
+              <button
+                onClick={() => {
+                  const current = parseFloat(calculatorDisplay);
+                  if (
+                    calculatorPreviousValue !== null &&
+                    calculatorOperation &&
+                    !calculatorWaitingForNewValue
+                  ) {
+                    const result = calculateResult();
+                    setCalculatorDisplay(result.toString());
+                    setCalculatorPreviousValue(result);
+                  } else {
+                    setCalculatorPreviousValue(current);
+                  }
+                  setCalculatorOperation("-");
+                  setCalculatorWaitingForNewValue(true);
+                }}
+                className="p-4 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-lg transition-colors"
+              >
+                −
+              </button>
+
+              {/* Row 4: 1, 2, 3, + */}
+              <button
+                onClick={() => handleCalculatorNumber("1")}
+                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
+              >
+                1
+              </button>
+              <button
+                onClick={() => handleCalculatorNumber("2")}
+                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
+              >
+                2
+              </button>
+              <button
+                onClick={() => handleCalculatorNumber("3")}
+                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
+              >
+                3
+              </button>
+              <button
+                onClick={() => {
+                  const current = parseFloat(calculatorDisplay);
+                  if (
+                    calculatorPreviousValue !== null &&
+                    calculatorOperation &&
+                    !calculatorWaitingForNewValue
+                  ) {
+                    const result = calculateResult();
+                    setCalculatorDisplay(result.toString());
+                    setCalculatorPreviousValue(result);
+                  } else {
+                    setCalculatorPreviousValue(current);
+                  }
+                  setCalculatorOperation("+");
+                  setCalculatorWaitingForNewValue(true);
+                }}
+                className="p-4 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-lg transition-colors"
+              >
+                +
+              </button>
+
+              {/* Row 5: +/-, 0, ., = */}
+              <button
+                onClick={() => {
+                  if (calculatorDisplay !== "0") {
+                    setCalculatorDisplay(
+                      calculatorDisplay.startsWith("-")
+                        ? calculatorDisplay.slice(1)
+                        : "-" + calculatorDisplay
+                    );
+                  }
+                }}
+                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
+              >
+                +/-
+              </button>
+              <button
+                onClick={() => handleCalculatorNumber("0")}
+                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
+              >
+                0
+              </button>
+              <button
+                onClick={() => {
+                  if (!calculatorDisplay.includes(".")) {
+                    setCalculatorDisplay(calculatorDisplay + ".");
+                  }
+                }}
+                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
+              >
+                .
+              </button>
+              <button
+                onClick={() => {
+                  if (calculatorPreviousValue !== null && calculatorOperation) {
+                    const result = calculateResult();
+                    setCalculatorDisplay(result.toString());
+                    setCalculatorPreviousValue(null);
+                    setCalculatorOperation(null);
+                    setCalculatorWaitingForNewValue(false);
+                  }
+                }}
+                className="p-4 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition-colors col-span-1"
+              >
+                =
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Subject Selection Modal */}
       {showSubjectModal && (
@@ -572,7 +870,7 @@ const ExamScreen = () => {
                           onChange={() => handleSelectAnswer(answer.id)}
                           className="w-5 h-5 text-primary border-gray-300 focus:ring-primary"
                         />
-                        <span className="font-semibold min-w-[2rem]">
+                        <span className="font-semibold min-w-8">
                           {answer.order}.
                         </span>
                         <span className="flex-1">{answer.answer_text}</span>
