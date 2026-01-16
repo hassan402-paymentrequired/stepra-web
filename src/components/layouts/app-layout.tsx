@@ -3,13 +3,13 @@ import { Link } from "react-router";
 import type { PropsWithChildren } from "react";
 import { useUser, useLogout } from "@/lib/auth";
 import { Logo } from "@/components/logo";
-import { LogOut, User, CreditCard, Users, Flame } from "lucide-react";
+import { LogOut, User, CreditCard, Users, Flame, Coins } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { getStreaks, type StreakData } from "@/apis/streak";
+import { getCreditBalance } from "@/apis/referral";
 
 const { Header, Content, Footer } = Layout;
-
 
 const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
   const {
@@ -21,6 +21,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [streakData, setStreakData] = useState<StreakData | null>(null);
+  const [creditBalance, setCreditBalance] = useState<number>(0);
 
   const fetchStreak = useCallback(async () => {
     try {
@@ -34,9 +35,22 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
     }
   }, []);
 
+  const fetchCreditBalance = useCallback(async () => {
+    try {
+      const response = await getCreditBalance();
+      if (response.success && response.data) {
+        setCreditBalance(response.data.credit_balance || 0);
+      }
+    } catch (error) {
+      // Silently fail - credit balance is not critical
+      console.error("Error fetching credit balance:", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (user) {
       fetchStreak();
+      fetchCreditBalance();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
@@ -164,10 +178,28 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
           style={{ display: "flex", alignItems: "center" }}
         >
           <Logo to="/" variant="logo" height={24} width={24} />
-          
         </div>
         {user && (
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {/* Credit Balance */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                color: "white",
+                padding: "4px 12px",
+                borderRadius: "6px",
+                background: "rgba(255, 255, 255, 0.1)",
+              }}
+            >
+              <Coins size={18} className="text-yellow-400" />
+              <span style={{ fontSize: "14px", fontWeight: 600 }}>
+                ₦{creditBalance.toLocaleString()}
+              </span>
+            </div>
+
+            {/* Profile Dropdown */}
             <Dropdown
               menu={{ items: profileMenuItems }}
               trigger={["click"]}
