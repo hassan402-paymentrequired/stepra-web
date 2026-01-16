@@ -11,6 +11,31 @@ import { getCreditBalance } from "@/apis/referral";
 
 const { Header, Content, Footer } = Layout;
 
+// Helper function to get current week days (7 days)
+const getCurrentWeekDays = () => {
+  const today = new Date();
+  const days: Array<{
+    date: Date;
+    dayName: string;
+    dayAbbr: string;
+  }> = [];
+
+  // Get the start of the week (Sunday = 0, but we'll start from today and go back 6 days)
+  // Show the last 7 days including today
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+
+    days.push({
+      date,
+      dayName: date.toLocaleDateString("en-US", { weekday: "long" }),
+      dayAbbr: date.toLocaleDateString("en-US", { weekday: "short" }),
+    });
+  }
+
+  return days;
+};
+
 const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
   const {
     token: { colorBgContainer, borderRadiusLG, colorBorder },
@@ -264,24 +289,117 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
             })}
           />
           {user && streakData && (
-            <div
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full border"
-              style={{
-                background: colorBgContainer,
-                borderColor: colorBorder,
-              }}
-            >
-              <Flame
-                size={16}
+            <>
+              {/* Mobile View: Simple number display */}
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full border md:hidden"
                 style={{
-                  color: streakData.current_streak > 0 ? "#f59e0b" : "#9ca3af",
+                  background: colorBgContainer,
+                  borderColor: colorBorder,
                 }}
-              />
-              <span className="text-sm font-medium whitespace-nowrap">
-                {streakData.current_streak} day
-                {streakData.current_streak !== 1 ? "s" : ""} streak
-              </span>
-            </div>
+              >
+                <Flame
+                  size={16}
+                  style={{
+                    color:
+                      streakData.current_streak > 0 ? "#f59e0b" : "#9ca3af",
+                  }}
+                />
+                <span className="text-sm font-medium whitespace-nowrap">
+                  {streakData.current_streak} day
+                  {streakData.current_streak !== 1 ? "s" : ""} streak
+                </span>
+              </div>
+
+              {/* Web View: Week calendar display */}
+              <div
+                className="hidden md:flex items-center gap-3 px-4 py-2 rounded-lg border"
+                style={{
+                  background: colorBgContainer,
+                  borderColor: colorBorder,
+                }}
+              >
+                <Flame
+                  size={18}
+                  style={{
+                    color:
+                      streakData.current_streak > 0 ? "#f59e0b" : "#9ca3af",
+                  }}
+                />
+                <div className="flex items-center gap-1.5">
+                  {getCurrentWeekDays().map((day, index) => {
+                    const dayStr = day.date.toISOString().split("T")[0];
+                    const hasStreak = streakData.all_streaks.includes(dayStr);
+                    const isToday =
+                      day.date.toDateString() === new Date().toDateString();
+
+                    return (
+                      <div
+                        key={index}
+                        className="flex flex-col items-center gap-1 px-2 py-1 rounded-md transition-colors"
+                        style={{
+                          background: hasStreak
+                            ? streakData.current_streak > 0
+                              ? "rgba(245, 158, 11, 0.15)"
+                              : "rgba(156, 163, 175, 0.15)"
+                            : "transparent",
+                          border: isToday
+                            ? "2px solid #f59e0b"
+                            : hasStreak
+                            ? "1px solid rgba(245, 158, 11, 0.3)"
+                            : "1px solid transparent",
+                        }}
+                        title={`${day.dayName} ${day.date.getDate()}${
+                          hasStreak ? " - Practiced" : ""
+                        }`}
+                      >
+                        <span
+                          className="text-xs font-medium"
+                          style={{
+                            color: isToday
+                              ? "#f59e0b"
+                              : hasStreak
+                              ? "#f59e0b"
+                              : "#9ca3af",
+                          }}
+                        >
+                          {day.dayAbbr}
+                        </span>
+                        <span
+                          className="text-xs font-semibold"
+                          style={{
+                            color: isToday
+                              ? "#f59e0b"
+                              : hasStreak
+                              ? "#f59e0b"
+                              : "#9ca3af",
+                          }}
+                        >
+                          {day.date.getDate()}
+                        </span>
+                        {hasStreak && (
+                          <div
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{
+                              background:
+                                streakData.current_streak > 0
+                                  ? "#f59e0b"
+                                  : "#9ca3af",
+                            }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="ml-2 pl-3 border-l">
+                  <span className="text-sm font-semibold">
+                    {streakData.current_streak} day
+                    {streakData.current_streak !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              </div>
+            </>
           )}
         </div>
         <div
