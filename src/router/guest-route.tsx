@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { type FC } from 'react';
 import { Navigate, Outlet } from 'react-router';
 import { useUser } from '@/lib/auth';
 

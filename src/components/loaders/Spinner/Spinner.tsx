@@ -1,6 +1,6 @@
 import { cn } from '@/utils';
 import { cva } from 'class-variance-authority';
-import { FC } from 'react';
+import { type FC } from 'react';
 
 interface SpinnerProps {
   fill?: boolean;

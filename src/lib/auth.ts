@@ -56,12 +56,12 @@ export const updateUserSessionData = (newData: Partial<User>) => {
   setSession(mergedSession);
 };
 
-const loginFn = async (credentials: { email: string; password: string }): Promise<LoginResponse> => {
+const loginFn = async (credentials: { email: string; password: string }): Promise<User> => {
   const response = await loginUser(credentials);
   
   if (response.success && response.data) {
     storeAuthData(response.data.token, response.data.user);
-    return response;
+    return response.data.user;
   }
   
   throw new Error(response.message || 'Login failed');
@@ -84,7 +84,7 @@ const registerFn = async (data: {
   throw new Error(response.message || 'Registration failed');
 };
 
-const logoutFn = async (_?: void): Promise<void> => {
+const logoutFn = async (_?: unknown): Promise<void> => {
   try {
     await logout();
   } catch (error) {

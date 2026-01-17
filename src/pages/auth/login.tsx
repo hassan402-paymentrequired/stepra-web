@@ -39,24 +39,22 @@ const Login = () => {
     if (!validate()) return;
 
     try {
-      const response = await login.mutateAsync({
+      const user = await login.mutateAsync({
         email: email.trim(),
         password,
       });
 
-      if (response.success) {
-        // Check if email is not verified
-        if (response.data?.email_verified === false) {
-          navigate("/authenticate/verify-email", {
-            state: { email: email.trim() },
-          });
-          return;
-        }
-        // Redirect to home or dashboard
-        navigate("/");
+      // Check if email is not verified
+      if (!user.email_verified_at) {
+        navigate("/authenticate/verify-email", {
+          state: { email: email.trim() },
+        });
+        return;
       }
+      // Redirect to home or dashboard
+      navigate("/");
     } catch (err) {
-      const error = err as AxiosError;
+      const error = err as AxiosError<{ errors?: Record<string, string[]>; message?: string }>;
       if (error?.response?.status === 403) {
         navigate("/authenticate/verify-email", {
           state: { email: email.trim() },

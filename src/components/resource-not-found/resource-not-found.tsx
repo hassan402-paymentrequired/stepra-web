@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { type FC } from 'react';
 import { Button } from '../ui';
 import { useNavigate } from 'react-router';
 import { Logo } from '../logo';

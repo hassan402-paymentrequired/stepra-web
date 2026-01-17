@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import AppLayout from "@/components/layouts/app-layout";
-import { Button, Input } from "@/components/ui";
+import { Button } from "@/components/ui";
 import {
   getSubjects,
   getPracticeQuestions,
@@ -13,8 +13,6 @@ import { getSubscriptionStatus } from "@/apis/subscription";
 import {
   Check,
   ChevronDown,
-  ChevronUp,
-  Loader2,
   AlertCircle,
 } from "lucide-react";
 import { getApiErrorMessage } from "@/utils";

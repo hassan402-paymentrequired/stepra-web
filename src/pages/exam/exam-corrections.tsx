@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { Button } from "@/components/ui";
-import { getExamResults, getExamQuestions } from "@/apis/exam";
+import { getExamResults } from "@/apis/exam";
 import { getApiErrorMessage } from "@/utils";
 import {
   ChevronLeft,
@@ -46,7 +46,6 @@ const ExamCorrections = () => {
   const subjects = (location.state as { subjects?: string[] })?.subjects || [];
 
   const [loading, setLoading] = useState(true);
-  const [results, setResults] = useState<QuestionResult[]>([]);
   const [questionsWithAnswers, setQuestionsWithAnswers] = useState<
     Record<number, QuestionWithAnswers>
   >({});
@@ -74,7 +73,6 @@ const ExamCorrections = () => {
       if (response.success && response.data) {
         const allResults = response.data.results || [];
         const attemptData = response.data.attempt;
-        setResults(allResults);
 
         // Fetch full question details with all answers
         // Note: The API should ideally include all answers in the response

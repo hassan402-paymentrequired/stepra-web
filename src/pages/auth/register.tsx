@@ -69,7 +69,7 @@ const Register = () => {
     if (!validate()) return;
 
     try {
-      const response = await register.mutateAsync({
+      await register.mutateAsync({
         name: name.trim(),
         email: email.trim(),
         password,
@@ -77,14 +77,13 @@ const Register = () => {
         referral_code: referralCode.trim() || undefined,
       });
 
-      if (response.success) {
-        // Redirect to email verification
-        navigate('/authenticate/verify-email', { state: { email: email.trim() } });
-      }
-    } catch (error: any) {
+      // Redirect to email verification
+      navigate('/authenticate/verify-email', { state: { email: email.trim() } });
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: { errors?: Record<string, string[]> } } };
       const errorMessage = getApiErrorMessage(error);
-      if (error?.response?.data?.errors) {
-        const apiErrors = error.response.data.errors;
+      if (axiosError?.response?.data?.errors) {
+        const apiErrors = axiosError.response.data.errors;
         setErrors({
           name: apiErrors.name?.[0],
           email: apiErrors.email?.[0],
