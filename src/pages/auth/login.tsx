@@ -45,7 +45,7 @@ const Login = () => {
       });
 
       // Check if email is not verified
-      if (!user.email_verified_at) {
+      if (!user?.email_verified_at) {
         navigate("/authenticate/verify-email", {
           state: { email: email.trim() },
         });

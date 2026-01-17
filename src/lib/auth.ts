@@ -3,7 +3,7 @@ import { isEmpty, merge } from 'lodash';
 import api from './api';
 import { clearSession, getSession, getSessionWithKey, removeSessionWithKey, setSession, setSessionWithValue } from './cookies';
 import { loginUser, registerUser, logout, getCurrentUser } from '@/apis/auth';
-import type { LoginResponse, User } from '@/types/api';
+import type {  User } from '@/types/api';
 
 export const removeWithoutRedirect = () => {
   clearSession();
@@ -58,12 +58,12 @@ export const updateUserSessionData = (newData: Partial<User>) => {
 
 const loginFn = async (credentials: { email: string; password: string }): Promise<User> => {
   const response = await loginUser(credentials);
-  
+
   if (response.success && response.data) {
     storeAuthData(response.data.token, response.data.user);
     return response.data.user;
   }
-  
+
   throw new Error(response.message || 'Login failed');
 };
 
@@ -75,12 +75,12 @@ const registerFn = async (data: {
   referral_code?: string;
 }): Promise<User> => {
   const response = await registerUser(data);
-  
+
   if (response.success && response.data) {
     storeAuthData(response.data.token, response.data.user);
     return response.data.user;
   }
-  
+
   throw new Error(response.message || 'Registration failed');
 };
 
