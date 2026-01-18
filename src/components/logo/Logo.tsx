@@ -3,7 +3,7 @@ import { Link } from '@/components/ui';
 import { type LogoProps } from './types';
 
 const Logo: FC<LogoProps> = ({ to = '#', variant = 'logo', ...props }) => {
-  let logoUrl = '/vite.svg';
+  let logoUrl = '/logo/favicon-32x32.png';
 
   if (variant === 'logomark') logoUrl = '/logomark.png';
 

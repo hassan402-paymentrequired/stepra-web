@@ -3,7 +3,7 @@ import { isEmpty } from 'lodash';
 import { getSessionWithKey } from './cookies';
 import { removeWithRedirect } from './auth';
 
-const baseUrl = import.meta.env.VITE_BASE_URL ?? 'http://localhost:8000/api';
+const baseUrl = import.meta.env.VITE_BASE_URL;
 
 const instance = axios.create({
   baseURL: baseUrl,

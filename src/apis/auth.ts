@@ -35,7 +35,7 @@ export const sendOtp = async (email: string) => {
   return response.data;
 };
 
-export const resendOtp = async (email: string) => {
+export const resendOtp = async (email?: string) => {
   const response = await api.post('/email-verification/resend-otp', { email });
   return response.data;
 };

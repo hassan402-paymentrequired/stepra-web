@@ -1,28 +1,20 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router';
+import { useNavigate,  Link } from 'react-router';
 import { useVerifyOtp, useResendOtp } from '@/services/mutations/useAuth';
 import { Button, Input } from '@/components/ui';
 import { Mail, ArrowLeft } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils';
+import { useUser } from '@/lib/auth';
 
 const VerifyEmail = () => {
+   const { data: user, refetch: refetchUser } = useUser();
   const navigate = useNavigate();
-  const location = useLocation();
   const verifyOtp = useVerifyOtp();
   const resendOtp = useResendOtp();
-  
-  const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [errors, setErrors] = useState<{ otp?: string; email?: string }>({});
+  const [errors, setErrors] = useState<{ otp?: string }>({});
   const [countdown, setCountdown] = useState(0);
-
-  useEffect(() => {
-    // Get email from location state or use stored email
-    const stateEmail = location.state?.email;
-    if (stateEmail) {
-      setEmail(stateEmail);
-    }
-  }, [location.state]);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -30,6 +22,15 @@ const VerifyEmail = () => {
       return () => clearTimeout(timer);
     }
   }, [countdown]);
+  
+
+  if (!user) {
+    navigate('/authenticate/login');
+  }
+
+  if (user?.email_verified_at) {
+    navigate('/');
+  }
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,23 +40,14 @@ const VerifyEmail = () => {
       return;
     }
 
-    if (!email.trim()) {
-      setErrors({ email: 'Email is required' });
-      return;
-    }
-
     try {
-      const response = await verifyOtp.mutateAsync({
-        email: email.trim(),
+      await verifyOtp.mutateAsync({
         otp: otp.trim(),
+        email: user?.email,
       });
 
-      if (response.success) {
-        // Redirect to login or home
-        navigate('/authenticate/login', { 
-          state: { message: 'Email verified successfully. Please login.' } 
-        });
-      }
+      await refetchUser();
+      navigate('/');
     } catch (error: any) {
       const errorMessage = getApiErrorMessage(error);
       if (error?.response?.data?.errors) {
@@ -70,18 +62,13 @@ const VerifyEmail = () => {
   };
 
   const handleResend = async () => {
-    if (!email.trim()) {
-      setErrors({ email: 'Email is required' });
-      return;
-    }
-
     try {
-      await resendOtp.mutateAsync(email.trim());
+      await resendOtp.mutateAsync(user?.email);
       setCountdown(60); // 60 seconds countdown
       setErrors({});
     } catch (error: any) {
       const errorMessage = getApiErrorMessage(error);
-      setErrors({ email: errorMessage });
+      setErrors({ otp: errorMessage });
     }
   };
 
@@ -102,23 +89,11 @@ const VerifyEmail = () => {
           </div>
           <h1 className="text-3xl font-bold mb-2">Verify your email</h1>
           <p className="text-muted-foreground">
-            We've sent a verification code to <strong>{email || 'your email'}</strong>
+            We've sent a verification code to <strong>{user?.email || 'your email'}</strong>
           </p>
         </div>
 
         <form onSubmit={handleVerify} className="space-y-4">
-          <Input
-            label="Email Address"
-            type="email"
-            placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            error={errors.email}
-            leftIcon={<Mail className="h-4 w-4" />}
-            autoComplete="email"
-            autoCapitalize="none"
-            disabled={!!location.state?.email}
-          />
 
           <Input
             label="Verification Code"
@@ -138,7 +113,7 @@ const VerifyEmail = () => {
 
           <Button
             type="submit"
-            className="w-full"
+            className="w-full mt-3 text-white"
             disabled={verifyOtp.isPending || !otp.trim()}
           >
             {verifyOtp.isPending ? 'Verifying...' : 'Verify Email'}

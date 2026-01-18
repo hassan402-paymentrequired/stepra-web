@@ -38,6 +38,15 @@ const Home = () => {
   useEffect(() => {
     if (!isLoading && !user) {
       navigate("/authenticate/login");
+      return;
+    }
+
+    // Check if email is verified - redirect to verification page if not verified
+    if (!isLoading && user && !user.email_verified_at) {
+      navigate("/authenticate/verify-email", { 
+        state: { email: user.email },
+        replace: true 
+      });
     }
   }, [user, isLoading, navigate]);
 

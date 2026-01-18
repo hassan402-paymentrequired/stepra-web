@@ -48,8 +48,8 @@ export interface RegisterResponse {
 }
 
 export interface OtpVerificationPayload {
-  email: string;
   otp: string;
+  email?: string;
 }
 
 export interface OtpVerificationResponse {

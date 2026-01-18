@@ -57,7 +57,7 @@ export const useSendOtp = () => {
 
 export const useResendOtp = () => {
   return useMutation({
-    mutationFn: (email: string) => resendOtp(email),
+    mutationFn: (email?: string) => resendOtp(email),
   });
 };
 
