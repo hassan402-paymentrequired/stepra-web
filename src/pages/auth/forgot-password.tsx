@@ -10,7 +10,7 @@ const ForgotPassword = () => {
   const navigate = useNavigate();
   const sendOtp = useSendPasswordResetOtp();
   const [email, setEmail] = useState('');
-  const [errors, setErrors] = useState<{ email?: string }>({});
+  const [_, setErrors] = useState<{ email?: string }>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const validate = () => {
