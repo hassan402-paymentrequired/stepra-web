@@ -60,6 +60,44 @@ export interface OtpVerificationResponse {
   };
 }
 
+export interface PasswordResetOtpPayload {
+  email: string;
+}
+
+export interface PasswordResetOtpResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    expires_at?: string;
+    otp?: string; // Only in development
+  };
+}
+
+export interface PasswordResetVerifyPayload {
+  email: string;
+  otp: string;
+}
+
+export interface PasswordResetVerifyResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    verified: boolean;
+  };
+}
+
+export interface PasswordResetPayload {
+  email: string;
+  otp: string;
+  password: string;
+  password_confirmation: string;
+}
+
+export interface PasswordResetResponse {
+  success: boolean;
+  message: string;
+}
+
 export interface ApiErrorResponse {
   success: false;
   message?: string;

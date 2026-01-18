@@ -5,6 +5,7 @@ import {
   Register,
   VerifyEmail,
   ForgotPassword,
+  ResetPassword,
   JAMBModeSelection,
   JAMBPastQuestionsSelection,
   JAMBPracticeQuestionsSelection,
@@ -39,14 +40,18 @@ const routesObject: RouteObject[] = [
         element: <Register />,
       },
       {
-        path: 'verify-email',
-        element: <VerifyEmail />,
-      },
-      {
         path: 'forgot-password',
         element: <ForgotPassword />,
       },
     ],
+  },
+  {
+    path: '/authenticate/verify-email',
+    element: <VerifyEmail />,
+  },
+  {
+    path: '/authenticate/reset-password',
+    element: <ResetPassword />,
   },
   {
     path: '/',

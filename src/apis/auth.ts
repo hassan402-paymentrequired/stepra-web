@@ -1,5 +1,18 @@
 import api from '@/lib/api';
-import type { LoginPayload, LoginResponse, OtpVerificationPayload, OtpVerificationResponse, RegisterPayload, RegisterResponse } from '@/types/api';
+import type {
+  LoginPayload,
+  LoginResponse,
+  OtpVerificationPayload,
+  OtpVerificationResponse,
+  RegisterPayload,
+  RegisterResponse,
+  PasswordResetOtpPayload,
+  PasswordResetOtpResponse,
+  PasswordResetVerifyPayload,
+  PasswordResetVerifyResponse,
+  PasswordResetPayload,
+  PasswordResetResponse,
+} from '@/types/api';
 
 
 export const loginUser = async (payload: LoginPayload): Promise<LoginResponse> => {
@@ -34,5 +47,26 @@ export const logout = async () => {
 
 export const getCurrentUser = async () => {
   const response = await api.get('/me');
+  return response.data;
+};
+
+// Password Reset functions
+export const sendPasswordResetOtp = async (payload: PasswordResetOtpPayload): Promise<PasswordResetOtpResponse> => {
+  const response = await api.post('/password-reset/send-otp', payload);
+  return response.data;
+};
+
+export const verifyPasswordResetOtp = async (payload: PasswordResetVerifyPayload): Promise<PasswordResetVerifyResponse> => {
+  const response = await api.post('/password-reset/verify-otp', payload);
+  return response.data;
+};
+
+export const resetPassword = async (payload: PasswordResetPayload): Promise<PasswordResetResponse> => {
+  const response = await api.post('/password-reset/reset', payload);
+  return response.data;
+};
+
+export const resendPasswordResetOtp = async (payload: PasswordResetOtpPayload): Promise<PasswordResetOtpResponse> => {
+  const response = await api.post('/password-reset/resend-otp', payload);
   return response.data;
 };

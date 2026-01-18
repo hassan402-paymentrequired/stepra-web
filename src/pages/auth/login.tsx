@@ -36,6 +36,7 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!validate()) return;
 
     try {
@@ -43,26 +44,22 @@ const Login = () => {
         email: email.trim(),
         password,
       });
+      console.log(user);
 
-      // Check if email is not verified
+      // Check if email is not verified - redirect to verification page
       if (!user?.email_verified_at) {
         navigate("/authenticate/verify-email", {
           state: { email: email.trim() },
         });
         return;
       }
-      // Redirect to home or dashboard
+      
+      // Email is verified - redirect to home or dashboard
       navigate("/");
     } catch (err) {
       const error = err as AxiosError<{ errors?: Record<string, string[]>; message?: string }>;
-      if (error?.response?.status === 403) {
-        navigate("/authenticate/verify-email", {
-          state: { email: email.trim() },
-        });
-        return;
-      }
-
       const errorMessage = getApiErrorMessage(error);
+      
       if (error?.response?.data?.errors) {
         const apiErrors = error.response.data.errors;
         setErrors({
@@ -137,7 +134,7 @@ const Login = () => {
             </Link>
           </div>
 
-          <Button type="submit" className="w-full" disabled={login.isPending}>
+          <Button type="submit" className="w-full text-white" disabled={login.isPending}>
             {login.isPending ? "Signing in..." : "Sign in"}
           </Button>
         </form>
