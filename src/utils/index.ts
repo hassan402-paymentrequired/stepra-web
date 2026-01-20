@@ -74,11 +74,56 @@ export const formatDate = (value: string): string => {
 };
 
 export const getApiErrorMessage = (error: any): string => {
+  // Handle array of errors
+  if (Array.isArray(error?.data?.errors)) {
+    const firstError = error.data.errors[0];
+    return typeof firstError === 'string' ? firstError : 'An unexpected error occurred';
+  }
+  
+  // Handle object of errors (e.g., {email: ['error message']})
+  if (error?.data?.errors && typeof error.data.errors === 'object' && !Array.isArray(error.data.errors)) {
+    const errorValues = Object.values(error.data.errors).flat();
+    if (errorValues.length > 0) {
+      const firstError = errorValues[0];
+      // Ensure we return a string
+      if (typeof firstError === 'string') {
+        return firstError;
+      }
+      // If it's still an object/array, convert to string
+      if (firstError) {
+        return String(firstError);
+      }
+    }
+  }
+  
+  // Handle response.data.errors (Axios error structure)
+  if (error?.response?.data?.errors) {
+    if (Array.isArray(error.response.data.errors)) {
+      const firstError = error.response.data.errors[0];
+      return typeof firstError === 'string' ? firstError : 'An unexpected error occurred';
+    }
+    if (typeof error.response.data.errors === 'object') {
+      const errorValues = Object.values(error.response.data.errors).flat();
+      if (errorValues.length > 0) {
+        const firstError = errorValues[0];
+        return typeof firstError === 'string' ? firstError : String(firstError);
+      }
+    }
+    if (typeof error.response.data.errors === 'string') {
+      return error.response.data.errors;
+    }
+  }
+  
+  // Handle string errors
+  if (typeof error?.data?.errors === 'string') {
+    return error.data.errors;
+  }
+  
+  // Fallback to message fields
   return (
-    error?.data?.errors?.[0] ||
-    error?.data?.errors ||
     error?.data?.message ||
-    error?.message ||
+    error?.response?.data?.message ||
+    (typeof error?.message === 'string' ? error.message : null) ||
     'An unexpected error occurred'
   );
 };
