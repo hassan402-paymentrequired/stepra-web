@@ -5,6 +5,7 @@ import { Button, Input } from "@/components/ui";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { getApiErrorMessage } from "@/utils";
 import type { AxiosError } from "axios";
+import { toast } from "sonner";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -44,21 +45,20 @@ const Login = () => {
         email: email.trim(),
         password,
       });
-      console.log(user);
+      
+      toast.success('Login successful');
 
-      // Check if email is not verified - redirect to verification page
       if (!user?.email_verified_at) {
         navigate("/authenticate/verify-email", {
           state: { email: email.trim() },
         });
         return;
       }
-      
-      // Email is verified - redirect to home or dashboard
-      navigate("/");
+    
     } catch (err) {
       const error = err as AxiosError<{ errors?: Record<string, string[]>; message?: string }>;
       const errorMessage = getApiErrorMessage(error);
+      toast.error(errorMessage);
       
       if (error?.response?.data?.errors) {
         const apiErrors = error.response.data.errors;

@@ -8,6 +8,7 @@ import { getSubscriptionStatus } from '@/apis/subscription';
 import { Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils';
 import type { AxiosError } from 'axios';
+import { toast } from 'sonner';
 
 const JAMBPracticeQuestionsSelection = () => {
   const navigate = useNavigate();
@@ -177,7 +178,7 @@ const JAMBPracticeQuestionsSelection = () => {
       }
 
       if (!firstExamId) {
-        alert('Failed to start exam. Please try again.');
+        toast.error('Failed to start exam. Please try again.');
         return;
       }
 
@@ -195,7 +196,7 @@ const JAMBPracticeQuestionsSelection = () => {
       });
 
       if (!attemptResponse.success) {
-        alert('Failed to start exam. Please try again.');
+        toast.error('Failed to start exam. Please try again.');
         return;
       }
 
@@ -213,12 +214,13 @@ const JAMBPracticeQuestionsSelection = () => {
           },
           timeMinutes: timeMinutesNum,
           subjects: selectedSubjects,
-          isPractice: true, // Mark as practice questions
+          isPractice: true, 
         },
       });
     } catch (error) {
+      console.error('Error starting exam:', error);
       const errorMessage = getApiErrorMessage(error as AxiosError);
-      alert(`Error: ${errorMessage}`);
+      toast.error(errorMessage);
     } finally {
       setStartingExam(false);
     }

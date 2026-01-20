@@ -6,6 +6,7 @@ import { Button, Input } from '@/components/ui';
 import { Mail, ArrowLeft } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils';
 import { useUser } from '@/lib/auth';
+import { toast } from 'sonner';
 
 const VerifyEmail = () => {
    const { data: user, refetch: refetchUser } = useUser();
@@ -45,11 +46,14 @@ const VerifyEmail = () => {
         otp: otp.trim(),
         email: user?.email,
       });
+      
+      toast.success('Email verified successfully');
 
       await refetchUser();
       navigate('/');
     } catch (error: any) {
       const errorMessage = getApiErrorMessage(error);
+      toast.error(errorMessage);
       if (error?.response?.data?.errors) {
         const apiErrors = error.response.data.errors;
         setErrors({
@@ -64,10 +68,12 @@ const VerifyEmail = () => {
   const handleResend = async () => {
     try {
       await resendOtp.mutateAsync(user?.email);
+      toast.success('Verification code resent successfully');
       setCountdown(60); // 60 seconds countdown
       setErrors({});
     } catch (error: any) {
       const errorMessage = getApiErrorMessage(error);
+      toast.error(errorMessage);
       setErrors({ otp: errorMessage });
     }
   };

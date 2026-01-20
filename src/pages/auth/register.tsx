@@ -4,6 +4,7 @@ import { useRegister } from '@/lib/auth';
 import { Button, Input } from '@/components/ui';
 import { Mail, Lock, User, Gift, Eye, EyeOff } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils';
+import { toast } from 'sonner';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -77,11 +78,14 @@ const Register = () => {
         referral_code: referralCode.trim() || undefined,
       });
 
+      toast.success('Account created successfully');
+
       // Redirect to email verification
       navigate('/authenticate/verify-email', { state: { email: email.trim() } });
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { errors?: Record<string, string[]> } } };
       const errorMessage = getApiErrorMessage(error);
+      toast.error(errorMessage);
       if (axiosError?.response?.data?.errors) {
         const apiErrors = axiosError.response.data.errors;
         setErrors({
