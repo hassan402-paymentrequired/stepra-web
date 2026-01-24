@@ -71,51 +71,51 @@ const Home = () => {
 
   return (
     <AppLayout>
-      <div className="w-full max-w-7xl mx-auto space-y-8">
+      <div className="w-full max-w-7xl mx-auto space-y-6">
         {/* Hero Welcome Section */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-8 md:p-12 text-white">
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-4 md:p-6 text-white">
           <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <GraduationCap className="h-6 w-6" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                <GraduationCap className="h-5 w-5" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold">
+                <h1 className="text-xl md:text-2xl font-bold">
                   Welcome back, {user?.name?.split(" ")[0]}!
                 </h1>
-                <p className="text-white/80 text-sm md:text-base">
+                <p className="text-white/80 text-sm">
                   Ready to ace your exams?
                 </p>
               </div>
             </div>
           </div>
           {/* Decorative background elements */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
         </div>
 
         {/* Practice Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Practice JAMB Card */}
           <div
             onClick={() => navigate("/jamb/mode-selection")}
-            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-2 border-blue-200/50 dark:border-blue-800/50 p-8 cursor-pointer transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] hover:border-blue-400 dark:hover:border-blue-600"
+            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-2 border-blue-200/50 dark:border-blue-800/50 p-5 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.01] hover:border-blue-400 dark:hover:border-blue-600"
           >
             <div className="relative z-10">
-              <div className="flex items-start justify-between mb-6">
-                <div className="w-16 h-16 rounded-xl bg-blue-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <BookOpen className="h-8 w-8 text-white" />
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-lg bg-blue-500 flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
+                  <BookOpen className="h-6 w-6 text-white" />
                 </div>
-                <ArrowRight className="h-6 w-6 text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ArrowRight className="h-5 w-5 text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-blue-900 dark:text-blue-100 mb-3 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+              <h2 className="text-xl md:text-2xl font-bold text-blue-900 dark:text-blue-100 mb-2 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
                 Practice JAMB
               </h2>
-              <p className="text-blue-700/80 dark:text-blue-300/80 text-base leading-relaxed">
+              <p className="text-blue-700/80 dark:text-blue-300/80 text-sm leading-relaxed mb-4">
                 Master JAMB past questions and boost your scores with
                 comprehensive practice sessions
               </p>
-              <div className="mt-6 flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+              <div className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400">
                 <span>Start practicing</span>
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </div>
@@ -127,23 +127,23 @@ const Home = () => {
           {/* Practice DLI Card */}
           <div
             onClick={() => navigate("/dli/practice")}
-            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20 border-2 border-purple-200/50 dark:border-purple-800/50 p-8 cursor-pointer transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] hover:border-purple-400 dark:hover:border-purple-600"
+            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20 border-2 border-purple-200/50 dark:border-purple-800/50 p-5 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.01] hover:border-purple-400 dark:hover:border-purple-600"
           >
             <div className="relative z-10">
-              <div className="flex items-start justify-between mb-6">
-                <div className="w-16 h-16 rounded-xl bg-purple-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <GraduationCap className="h-8 w-8 text-white" />
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-lg bg-purple-500 flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
+                  <GraduationCap className="h-6 w-6 text-white" />
                 </div>
-                <ArrowRight className="h-6 w-6 text-purple-600 dark:text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ArrowRight className="h-5 w-5 text-purple-600 dark:text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-purple-900 dark:text-purple-100 mb-3 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors">
+              <h2 className="text-xl md:text-2xl font-bold text-purple-900 dark:text-purple-100 mb-2 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors">
                 Practice DLI
               </h2>
-              <p className="text-purple-700/80 dark:text-purple-300/80 text-base leading-relaxed">
+              <p className="text-purple-700/80 dark:text-purple-300/80 text-sm leading-relaxed mb-4">
                 Enhance your skills with DLI practice questions and timed
                 sessions
               </p>
-              <div className="mt-6 flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400">
+              <div className="flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400">
                 <span>Start practicing</span>
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </div>
@@ -154,17 +154,17 @@ const Home = () => {
         </div>
 
         {/* Leaderboard Section */}
-        <div className="rounded-2xl bg-card border-2 border-border/50 p-6 md:p-8 shadow-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg">
-              <Trophy className="h-6 w-6 text-white" />
+        <div className="rounded-xl bg-card border-2 border-border/50 p-5 md:p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-md">
+              <Trophy className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+              <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
                 Top Performers
-                <TrendingUp className="h-5 w-5 text-primary" />
+                <TrendingUp className="h-4 w-4 text-primary" />
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 See who's leading the leaderboard
               </p>
             </div>
