@@ -2,6 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { logViolationWithContext } from '@/apis/security';
 
+interface KeyCombination {
+  ctrl?: boolean;
+  shift?: boolean;
+  cmd?: boolean;
+  option?: boolean;
+  key: string;
+}
+
 interface UseScreenshotPreventionOptions {
   enabled?: boolean;
   onScreenshotAttempt?: () => void;
@@ -30,8 +38,9 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
   useEffect(() => {
     if (!enabled) return;
 
-    // Create dynamic watermark
+    // Create multi-layer watermark system
     const createWatermark = () => {
+      // Main watermark
       const watermark = document.createElement('div');
       watermark.style.cssText = `
         position: fixed;
@@ -41,27 +50,64 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
         height: 100vh;
         pointer-events: none;
         z-index: 9999;
-        opacity: 0.05;
-        font-size: 48px;
+        opacity: 0.03;
+        font-size: 24px;
         font-weight: bold;
         color: #000;
-        transform: rotate(-45deg);
         display: flex;
         align-items: center;
         justify-content: center;
-        white-space: nowrap;
         user-select: none;
-        background-image: repeating-linear-gradient(
-          45deg,
-          transparent,
-          transparent 100px,
-          rgba(0,0,0,0.02) 100px,
-          rgba(0,0,0,0.02) 200px
-        );
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       `;
-      watermark.textContent = watermarkText;
+      
+      // Create repeating watermark pattern
+      const watermarkPattern = Array(20).fill(null).map((_, i) => {
+        const rotation = (i * 18) - 45; // Spread rotations from -45 to 270 degrees
+        return `<div style="
+          position: absolute;
+          width: 100vw;
+          height: 100vh;
+          transform: rotate(${rotation}deg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0.6;
+          font-size: ${20 + (i % 3) * 4}px;
+        ">${watermarkText}</div>`;
+      }).join('');
+      
+      watermark.innerHTML = watermarkPattern;
       document.body.appendChild(watermark);
+      
+      // Additional corner watermarks for Mac screenshot protection
+      const cornerWatermarks = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+      cornerWatermarks.positions = [];
+      
+      cornerWatermarks.forEach((position, index) => {
+        const corner = document.createElement('div');
+        const [vertical, horizontal] = position.split('-');
+        corner.style.cssText = `
+          position: fixed;
+          ${vertical}: 10px;
+          ${horizontal}: 10px;
+          pointer-events: none;
+          z-index: 10000;
+          opacity: 0.08;
+          font-size: 12px;
+          font-weight: 600;
+          color: #666;
+          transform: rotate(${index * 90}deg);
+          user-select: none;
+          font-family: monospace;
+        `;
+        corner.textContent = `${watermarkText} - ${new Date().toISOString()}`;
+        document.body.appendChild(corner);
+        cornerWatermarks.positions.push(corner);
+      });
+      
       watermarkRef.current = watermark;
+      (watermarkRef.current as any).cornerElements = cornerWatermarks.positions;
     };
 
     // Add protective CSS
@@ -114,30 +160,43 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
 
     // Screenshot detection methods
     const handleKeyDown = (e: KeyboardEvent) => {
-      const prohibitedKeys = [
+      const prohibitedKeys: (string | KeyCombination)[] = [
         'PrintScreen',
         'F12',
+        // Windows/Linux shortcuts
         { ctrl: true, shift: true, key: 'I' }, // Dev tools
-        { ctrl: true, shift: true, key: 'J' }, // Console
+        { ctrl: true, shift: true, key: 'J' }, // Console  
         { ctrl: true, shift: true, key: 'C' }, // Inspector
         { ctrl: true, key: 'u' }, // View source
         { ctrl: true, key: 's' }, // Save page
         { ctrl: true, key: 'p' }, // Print
-        { cmd: true, shift: true, key: '3' }, // Mac screenshot
+        { ctrl: true, shift: true, key: 'Delete' }, // Clear data
+        // Mac shortcuts
+        { cmd: true, shift: true, key: '3' }, // Mac full screen screenshot
         { cmd: true, shift: true, key: '4' }, // Mac area screenshot
-        { cmd: true, shift: true, key: '5' }, // Mac screen recording
+        { cmd: true, shift: true, key: '5' }, // Mac screenshot & screen recording
+        { cmd: true, shift: true, key: '6' }, // Mac Touch Bar screenshot  
+        { cmd: true, key: 's' }, // Mac save
+        { cmd: true, key: 'p' }, // Mac print
+        { cmd: true, option: true, key: 'i' }, // Mac dev tools
+        { cmd: true, option: true, key: 'j' }, // Mac console
+        { cmd: true, option: true, key: 'c' }, // Mac inspector
+        { cmd: true, key: 'u' }, // Mac view source
       ];
 
       const isProhibited = prohibitedKeys.some(key => {
         if (typeof key === 'string') {
           return e.key === key;
         }
-        return (
-          (key.ctrl ? e.ctrlKey : true) &&
-          (key.shift ? e.shiftKey : true) &&
-          (key.cmd ? e.metaKey : true) &&
-          e.key.toLowerCase() === key.key.toLowerCase()
-        );
+        
+        // Check if all specified modifier keys match (ignore unspecified ones)
+        const ctrlMatch = key.ctrl !== undefined ? (key.ctrl === e.ctrlKey) : true;
+        const shiftMatch = key.shift !== undefined ? (key.shift === e.shiftKey) : true; 
+        const cmdMatch = key.cmd !== undefined ? (key.cmd === e.metaKey) : true;
+        const optionMatch = key.option !== undefined ? (key.option === e.altKey) : true;
+        const keyMatch = e.key.toLowerCase() === key.key.toLowerCase();
+        
+        return ctrlMatch && shiftMatch && cmdMatch && optionMatch && keyMatch;
       });
 
       if (isProhibited) {
@@ -147,9 +206,12 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
         
         // Log to backend if enabled
         if (logToBackend) {
+          const keyCombo = `${e.ctrlKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.metaKey ? 'Cmd+' : ''}${e.altKey ? 'Option+' : ''}${e.key}`;
           logViolationWithContext('keyboard_shortcut', {
-            key_combination: `${e.ctrlKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.metaKey ? 'Cmd+' : ''}${e.key}`,
+            key_combination: keyCombo,
             violation_count: suspiciousActivityCount.current,
+            platform: navigator.platform,
+            is_mac: /Mac|iPhone|iPad|iPod/.test(navigator.platform),
           }, attemptId);
         }
         
@@ -157,8 +219,13 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
         onSuspiciousActivity?.('keyboard_shortcut');
         
         // Escalating warnings based on violation count
+        const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+        const screenshotShortcuts = isMac 
+          ? 'Cmd+Shift+3, Cmd+Shift+4, Cmd+Shift+5' 
+          : 'Print Screen, Alt+Print Screen';
+          
         if (suspiciousActivityCount.current === 1) {
-          toast.warning('Screenshot shortcuts are disabled during practice sessions.');
+          toast.warning(`Screenshot shortcuts (${screenshotShortcuts}) are disabled during practice sessions.`);
         } else if (suspiciousActivityCount.current <= 3) {
           toast.error(`Screenshot attempts detected (${suspiciousActivityCount.current}). Please follow exam guidelines.`);
         } else if (suspiciousActivityCount.current <= 5) {
@@ -236,7 +303,7 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
       }, 500);
     };
 
-    // Detect potential screen recording (experimental)
+    // Detect potential screen recording and Mac-specific screenshot apps
     const detectScreenRecording = () => {
       if ('mediaDevices' in navigator) {
         navigator.mediaDevices.enumerateDevices().then(devices => {
@@ -247,10 +314,47 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
           
           if (screenDevices.length > 0) {
             onSuspiciousActivity?.('potential_screen_recording');
+            if (logToBackend) {
+              logViolationWithContext('potential_screen_recording', {
+                screen_devices_detected: screenDevices.length,
+                device_labels: screenDevices.map(d => d.label),
+              }, attemptId);
+            }
           }
         }).catch(() => {
           // Permission denied or not supported
         });
+      }
+
+      // Mac-specific: Detect if Screenshot.app might be running
+      // This is limited but can detect some activities
+      if (/Mac/.test(navigator.platform)) {
+        // Monitor for rapid window focus changes (common when using Screenshot.app)
+        let focusChangeCount = 0;
+        const focusChangeWindow = 5000; // 5 seconds
+        
+        const detectRapidFocusChanges = () => {
+          focusChangeCount++;
+          if (focusChangeCount > 3) {
+            onSuspiciousActivity?.('rapid_focus_changes');
+            if (logToBackend) {
+              logViolationWithContext('potential_screen_recording', {
+                rapid_focus_changes: focusChangeCount,
+                platform: 'Mac',
+                possible_screenshot_app: true,
+              }, attemptId);
+            }
+            toast.warning('Rapid window switching detected. Screenshot app usage suspected.');
+          }
+          
+          // Reset counter after window
+          setTimeout(() => {
+            focusChangeCount = Math.max(0, focusChangeCount - 1);
+          }, focusChangeWindow);
+        };
+
+        window.addEventListener('focus', detectRapidFocusChanges);
+        window.addEventListener('blur', detectRapidFocusChanges);
       }
     };
 
@@ -275,6 +379,16 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
       document.head.removeChild(style);
       if (watermarkRef.current) {
         document.body.removeChild(watermarkRef.current);
+        
+        // Remove corner watermarks
+        const cornerElements = (watermarkRef.current as any).cornerElements;
+        if (cornerElements) {
+          cornerElements.forEach((element: HTMLElement) => {
+            if (element.parentNode) {
+              document.body.removeChild(element);
+            }
+          });
+        }
       }
       document.body.classList.remove('screenshot-protected', 'suspicious-activity');
       

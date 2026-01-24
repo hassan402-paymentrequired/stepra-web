@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { Button, Input } from "@/components/ui";
 import { submitAnswer, completeExamAttempt } from "@/apis/exam";
@@ -30,7 +30,7 @@ interface ExamScreenLocationState {
   };
   timeMinutes: number;
   subjects: string[];
-  isPractice?: boolean; // Flag to identify practice questions
+  isPractice?: boolean; // Fla
 }
 
 const ExamScreen = () => {
@@ -39,8 +39,8 @@ const ExamScreen = () => {
   const state = location.state as ExamScreenLocationState;
   const { data: user } = useUser();
 
-  // Screenshot prevention with user identification
-  const { isBlurred, suspiciousActivityCount } = useScreenshotPrevention({
+  // Screenshot prevention hook
+  const { isBlurred } = useScreenshotPrevention({
     enabled: true,
     strictMode: true,
     logToBackend: true,
@@ -51,113 +51,506 @@ const ExamScreen = () => {
     },
     onSuspiciousActivity: (type) => {
       console.warn('Suspicious activity detected:', type, 'by user:', user?.email, 'in attempt:', state?.attemptId);
-      
-      // Show escalating warnings based on activity count
-      if (suspiciousActivityCount >= 5) {
-        toast.error('⚠️ Multiple security violations detected. Practice session is being monitored.');
-      }
     },
   });
 
+  // Enhanced screenshot prevention and auto-submit functionality
+  useEffect(() => {
+    // Aggressive screenshot prevention
+    const preventScreenshot = (e: KeyboardEvent) => {
+      // More comprehensive key detection
+      const isMac = /Mac/.test(navigator.platform);
+      
+      const prohibitedShortcuts = [
+        // Windows/Linux screenshots
+        { key: 'PrintScreen' },
+        { key: 'Insert', alt: true }, // Alt+Print Screen
+        { key: 's', ctrl: true }, // Save page
+        { key: 'p', ctrl: true }, // Print
+        
+        // Mac screenshots - ALL variations
+        { key: '3', cmd: true, shift: true }, // Full screen
+        { key: '4', cmd: true, shift: true }, // Area selection
+        { key: '5', cmd: true, shift: true }, // Screenshot options
+        { key: '6', cmd: true, shift: true }, // Touch bar
+        
+        // Developer tools  
+        { key: 'F12' },
+        { key: 'i', ctrl: true, shift: true },
+        { key: 'j', ctrl: true, shift: true },
+        { key: 'c', ctrl: true, shift: true },
+        { key: 'i', cmd: true, option: true }, // Mac dev tools
+        
+        // View source
+        { key: 'u', ctrl: true },
+        { key: 'u', cmd: true },
+      ];
+
+      // More robust detection - check all modifier combinations
+      const isProhibited = prohibitedShortcuts.some(shortcut => {
+        const keyMatch = e.key.toLowerCase() === shortcut.key.toLowerCase();
+        if (!keyMatch) return false;
+        
+        // Check modifier keys - all specified modifiers must match exactly
+        const ctrlMatch = shortcut.ctrl === undefined ? !e.ctrlKey : (shortcut.ctrl === e.ctrlKey);
+        const shiftMatch = shortcut.shift === undefined ? !e.shiftKey : (shortcut.shift === e.shiftKey);
+        const cmdMatch = shortcut.cmd === undefined ? !e.metaKey : (shortcut.cmd === e.metaKey);
+        const altMatch = shortcut.alt === undefined ? !e.altKey : (shortcut.alt === e.altKey);
+        const optionMatch = shortcut.option === undefined ? !e.altKey : (shortcut.option === e.altKey);
+        
+        return keyMatch && ctrlMatch && shiftMatch && cmdMatch && altMatch && optionMatch;
+      });
+
+      if (isProhibited) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        e.stopPropagation();
+        
+        // Show platform-specific message
+        const shortcut = isMac ? 'Cmd+Shift+3/4/5' : 'Print Screen';
+        toast.error(`Screenshots (${shortcut}) are strictly prohibited during practice sessions.`);
+        
+        // Log violation
+        console.warn('Screenshot attempt blocked:', {
+          key: e.key,
+          ctrl: e.ctrlKey,
+          shift: e.shiftKey,
+          cmd: e.metaKey,
+          platform: navigator.platform
+        });
+        
+        return false;
+      }
+    };
+
+    // Disable right-click
+    const preventRightClick = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toast.warning('Right-click is disabled during practice.');
+      return false;
+    };
+
+    // Disable text selection - but allow on interactive elements
+    const preventSelection = (e: Event) => {
+      const target = e.target as HTMLElement;
+      // Allow selection on interactive elements
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'BUTTON' ||
+        target.closest('button') ||
+        target.closest('input') ||
+        target.closest('textarea') ||
+        target.closest('[role="button"]') ||
+        target.closest('[role="radio"]') ||
+        target.closest('[role="checkbox"]') ||
+        target.closest('.calculator') ||
+        target.closest('[data-interactive="true"]')
+      ) {
+        return true; // Allow selection on interactive elements
+      }
+      // Prevent selection on question text and other content
+      e.preventDefault();
+      return false;
+    };
+    
+    // Allow drag on interactive elements only
+    const preventDrag = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'BUTTON' ||
+        target.closest('button') ||
+        target.closest('input') ||
+        target.closest('textarea') ||
+        target.closest('[role="button"]') ||
+        target.closest('.calculator')
+      ) {
+        return true; // Allow drag on interactive elements
+      }
+      e.preventDefault();
+      return false;
+    };
+
+    // Add aggressive event listeners with capture phase
+    document.addEventListener('keydown', preventScreenshot, true);
+    document.addEventListener('keyup', preventScreenshot, true);
+    document.addEventListener('keypress', preventScreenshot, true);
+    document.addEventListener('contextmenu', preventRightClick, true);
+    // Only prevent selection on non-interactive elements
+    document.addEventListener('selectstart', preventSelection, true);
+    // Allow drag on interactive elements
+    document.addEventListener('dragstart', preventDrag, true);
+    // Prevent copy/cut only on question content
+    document.addEventListener('copy', preventSelection, true);
+    document.addEventListener('cut', preventSelection, true);
+    
+    // Prevent screen capture using Screen Capture API (if available)
+    let originalGetDisplayMedia: any = null;
+    if ('getDisplayMedia' in navigator.mediaDevices) {
+      // Store original function
+      originalGetDisplayMedia = (navigator.mediaDevices as any).getDisplayMedia;
+      // Override to prevent screen sharing
+      (navigator.mediaDevices as any).getDisplayMedia = async function(...args: any[]) {
+        toast.error('Screen sharing is not allowed during practice sessions.');
+        throw new Error('Screen sharing is disabled');
+      };
+    }
+    
+    // Disable print screen more aggressively
+    window.addEventListener('keydown', (e) => {
+      // Additional check for PrintScreen key
+      if (e.key === 'PrintScreen' || (e.keyCode === 44 && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey)) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        toast.error('Screenshots are not allowed during practice sessions.');
+        return false;
+      }
+    }, true);
+
+    // Add CSS protection
+    const style = document.createElement('style');
+    style.textContent = `
+      /* Prevent selection on question text and non-interactive content */
+      .exam-content p,
+      .exam-content div:not(.calculator):not([role="button"]):not([role="radio"]):not([role="checkbox"]):not(button):not(input):not(textarea),
+      .exam-content h1,
+      .exam-content h2,
+      .exam-content h3,
+      .exam-content h4,
+      .exam-content h5,
+      .exam-content h6,
+      .exam-content span:not(button span):not(input span) {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+      }
+      
+      /* Allow all interactive elements to be selectable and clickable */
+      button, 
+      input, 
+      textarea, 
+      [role="button"], 
+      [role="radio"], 
+      [role="checkbox"],
+      [type="radio"],
+      [type="checkbox"],
+      label,
+      .calculator,
+      .calculator *,
+      [data-interactive="true"],
+      [data-interactive="true"] * {
+        -webkit-user-select: auto !important;
+        -moz-user-select: auto !important;
+        -ms-user-select: auto !important;
+        user-select: auto !important;
+        -webkit-touch-callout: default !important;
+        pointer-events: auto !important;
+        cursor: pointer !important;
+      }
+      
+      /* Specifically allow text selection in text inputs */
+      input[type="text"],
+      input[type="number"],
+      input[type="email"],
+      textarea {
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+        user-select: text !important;
+        cursor: text !important;
+      }
+      
+      /* Ensure radio buttons and checkboxes are clickable */
+      input[type="radio"],
+      input[type="checkbox"] {
+        cursor: pointer !important;
+        pointer-events: auto !important;
+        -webkit-appearance: auto !important;
+        appearance: auto !important;
+      }
+      
+      /* Allow pointer events on body when not blurred */
+      body {
+        pointer-events: ${isBlurred ? 'none' : 'auto'};
+      }
+      
+      /* Always allow pointer events on interactive elements */
+      button, 
+      input, 
+      textarea, 
+      [role="button"], 
+      [role="radio"], 
+      [role="checkbox"],
+      [type="radio"],
+      [type="checkbox"],
+      label,
+      .calculator,
+      .calculator * {
+        pointer-events: auto !important;
+      }
+
+      body {
+        filter: ${isBlurred ? 'blur(10px)' : 'none'};
+        transition: filter 0.3s ease;
+      }
+
+      @media print {
+        body * {
+          display: none !important;
+        }
+        body::after {
+          content: "Screenshots and printing are not allowed";
+          display: block !important;
+          font-size: 2rem;
+          text-align: center;
+          margin-top: 40vh;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.removeEventListener('keydown', preventScreenshot, true);
+      document.removeEventListener('keyup', preventScreenshot, true);
+      document.removeEventListener('keypress', preventScreenshot, true);
+      document.removeEventListener('contextmenu', preventRightClick, true);
+      document.removeEventListener('selectstart', preventSelection, true);
+      document.removeEventListener('dragstart', preventDrag, true);
+      document.removeEventListener('copy', preventSelection, true);
+      document.removeEventListener('cut', preventSelection, true);
+      if (style.parentNode) {
+        document.head.removeChild(style);
+      }
+      // Restore original getDisplayMedia if we modified it
+      if (originalGetDisplayMedia && 'getDisplayMedia' in navigator.mediaDevices) {
+        (navigator.mediaDevices as any).getDisplayMedia = originalGetDisplayMedia;
+      }
+    };
+  }, [isBlurred]);
+
+  // Refs for performance optimization
+  const submitTimeoutRef = useRef<NodeJS.Timeout>();
+  const autoSubmitRef = useRef(false);
+
+  // Core state
   const [subjectsQuestions] = useState<Record<string, Question[]>>(
     state?.subjectsQuestions || {}
   );
   const [currentSubject, setCurrentSubject] = useState<string>(
-    state?.subjects?.[0] || Object.keys(subjectsQuestions)[0] || ""
+    state?.subjects?.[0] || Object.keys(state?.subjectsQuestions || {})[0] || ""
   );
-  const [subjectCurrentIndex, setSubjectCurrentIndex] = useState<
-    Record<string, number>
-  >(() => {
-    const indices: Record<string, number> = {};
-    Object.keys(subjectsQuestions).forEach((subject) => {
-      indices[subject] = 0;
-    });
-    return indices;
-  });
-  const [selectedAnswers, setSelectedAnswers] = useState<
-    Record<number, number | string>
-  >({});
-  const [textInputAnswers, setTextInputAnswers] = useState<
-    Record<number, string>
-  >({});
-  const [timeRemaining, setTimeRemaining] = useState(
-    (state?.timeMinutes || 30) * 60
-  ); // in seconds
+  
+  // Optimized subject index initialization
+  const [subjectCurrentIndex, setSubjectCurrentIndex] = useState<Record<string, number>>(() => 
+    Object.keys(state?.subjectsQuestions || {}).reduce((acc, subject) => {
+      acc[subject] = 0;
+      return acc;
+    }, {} as Record<string, number>)
+  );
+
+  // Answer state
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number | string>>({});
+  const [textInputAnswers, setTextInputAnswers] = useState<Record<number, string>>({});
+  
+  // UI state
+  const [timeRemaining, setTimeRemaining] = useState((state?.timeMinutes || 30) * 60);
   const [loading, setLoading] = useState(false);
   const [showSubjectModal, setShowSubjectModal] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [questionStartTime, setQuestionStartTime] = useState<Record<number, number>>({});
+
+  // Calculator state
   const [calculatorDisplay, setCalculatorDisplay] = useState("0");
-  const [calculatorPreviousValue, setCalculatorPreviousValue] = useState<
-    number | null
-  >(null);
-  const [calculatorOperation, setCalculatorOperation] = useState<string | null>(
-    null
-  );
-  const [calculatorWaitingForNewValue, setCalculatorWaitingForNewValue] =
-    useState(false);
-  const [questionStartTime, setQuestionStartTime] = useState<
-    Record<number, number>
-  >({});
+  const [calculatorPreviousValue, setCalculatorPreviousValue] = useState<number | null>(null);
+  const [calculatorOperation, setCalculatorOperation] = useState<string | null>(null);
+  const [calculatorWaitingForNewValue, setCalculatorWaitingForNewValue] = useState(false);
 
-  // Get current subject's questions and progress
-  const currentQuestions = subjectsQuestions[currentSubject] || [];
-  const currentQuestionIndex = subjectCurrentIndex[currentSubject] || 0;
-  const currentQuestion = currentQuestions[currentQuestionIndex];
-  const totalQuestionsForSubject = currentQuestions.length;
+  // Memoized calculations for performance optimization
+  const memoizedData = useMemo(() => {
+    const currentQuestions = subjectsQuestions[currentSubject] || [];
+    const currentQuestionIndex = subjectCurrentIndex[currentSubject] || 0;
+    const currentQuestion = currentQuestions[currentQuestionIndex];
+    const totalQuestionsForSubject = currentQuestions.length;
 
-  // Check if all subjects are completed
-  const allSubjectsCompleted = Object.keys(subjectsQuestions).every(
-    (subject) => {
-      const questions = subjectsQuestions[subject] || [];
-      return questions.every((q) => {
-        if (
-          q.question_type === "multiple_choice" ||
-          q.question_type === "true_false"
-        ) {
-          return selectedAnswers[q.id] !== undefined;
-        } else {
-          return (
-            textInputAnswers[q.id] !== undefined &&
-            textInputAnswers[q.id] !== ""
-          );
-        }
+    // Optimized completion check - only check if we have questions
+    const allSubjectsCompleted = Object.keys(subjectsQuestions).length > 0 && 
+      Object.entries(subjectsQuestions).every(([subject, questions]) => {
+        const subjectIndex = subjectCurrentIndex[subject] || 0;
+        return subjectIndex >= questions.length - 1;
       });
-    }
-  );
 
-  // Handle leaving exam - end practice questions immediately
+    // Calculate progress without expensive loops
+    const totalQuestions = Object.values(subjectsQuestions).reduce((sum, questions) => sum + questions.length, 0);
+    const answeredQuestions = Object.keys(subjectsQuestions).reduce((count, subject) => {
+      const questions = subjectsQuestions[subject];
+      const currentIndex = subjectCurrentIndex[subject] || 0;
+      return count + Math.min(currentIndex + 1, questions.length);
+    }, 0);
+
+    return {
+      currentQuestions,
+      currentQuestionIndex,
+      currentQuestion,
+      totalQuestionsForSubject,
+      allSubjectsCompleted,
+      totalQuestions,
+      answeredQuestions,
+      progressPercentage: totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0,
+    };
+  }, [subjectsQuestions, currentSubject, subjectCurrentIndex]);
+
+  // Destructure memoized values
+  const { 
+    currentQuestions, 
+    currentQuestionIndex, 
+    currentQuestion, 
+    totalQuestionsForSubject,
+    allSubjectsCompleted,
+    totalQuestions,
+    answeredQuestions,
+    progressPercentage 
+  } = memoizedData;
+
+  // Optimized auto-submit and exit warning system
   useEffect(() => {
-    const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
-      if (state?.isPractice && state?.attemptId) {
-        e.preventDefault();
-        e.returnValue = "";
-        // Complete the exam attempt
-        try {
-          await completeExamAttempt(state.attemptId, {
-            subjects: state.subjects?.map((subject) => ({
-              subject,
-              question_count: subjectsQuestions[subject]?.length || 0,
+    let isSubmitting = false;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Always show warning when trying to leave
+      const message = 'Your practice session is in progress. Leaving will auto-submit your current answers. Are you sure?';
+      e.preventDefault();
+      e.returnValue = message;
+
+      // Auto-complete the attempt (answers are already submitted as user progresses)
+      if (!isSubmitting && state?.attemptId && !autoSubmitRef.current) {
+        isSubmitting = true;
+        autoSubmitRef.current = true;
+
+        // Submit any remaining answers first, then complete
+        const remainingAnswers = [
+          ...Object.entries(selectedAnswers)
+            .filter(([qId, aId]) => aId !== undefined && typeof aId === 'number')
+            .map(([qId, aId]) => ({
+              question_id: parseInt(qId),
+              answer_id: aId as number,
             })),
-            duration_minutes: state.timeMinutes,
+        ];
+
+        // Use sendBeacon for reliable submission during page unload
+        const completeData = {
+          subjects: state.subjects?.map(subject => ({
+            subject,
+            question_count: subjectsQuestions[subject]?.length || 0
+          })),
+          duration_minutes: state.timeMinutes,
+        };
+
+        if (navigator.sendBeacon) {
+          const data = JSON.stringify(completeData);
+          navigator.sendBeacon(
+            `/api/exam-attempts/${state.attemptId}/complete`,
+            new Blob([data], { type: 'application/json' })
+          );
+        } else {
+          // Fallback for browsers without sendBeacon
+          fetch(`/api/exam-attempts/${state.attemptId}/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(completeData),
+            keepalive: true,
+          }).catch(error => {
+            console.error('Auto-complete failed:', error);
           });
-        } catch (error) {
-          console.error("Error completing exam on leave:", error);
+        }
+      }
+
+      return message;
+    };
+
+    // Handle tab visibility changes for security and auto-submit
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Start countdown for auto-submit if user stays away too long
+        submitTimeoutRef.current = setTimeout(() => {
+          if (!autoSubmitRef.current) {
+            toast.warning('Inactive for too long. Auto-submitting practice session...');
+            handleAutoSubmit();
+          }
+        }, 60000); // 1 minute of inactivity
+      } else {
+        // Cancel auto-submit if user returns
+        if (submitTimeoutRef.current) {
+          clearTimeout(submitTimeoutRef.current);
         }
       }
     };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+      }
     };
-  }, [
-    state?.isPractice,
-    state?.attemptId,
-    state?.subjects,
-    state?.timeMinutes,
-    subjectsQuestions,
-  ]);
+  }, [selectedAnswers, textInputAnswers, timeRemaining, state]);
+
+  // Auto-submit function with optimized batch processing
+  const handleAutoSubmit = useCallback(async (reason: 'user_exit' | 'timeout' | 'manual' = 'user_exit') => {
+    if (autoSubmitRef.current || !state?.attemptId) return;
+    
+    autoSubmitRef.current = true;
+    setLoading(true);
+
+    try {
+      // Efficiently collect answers without looping through all questions
+      const submissions = [
+        ...Object.entries(selectedAnswers).map(([qId, aId]) => ({
+          question_id: parseInt(qId),
+          answer_id: typeof aId === 'number' ? aId : 0,
+          time_spent: questionStartTime[parseInt(qId)] ? Math.floor((Date.now() - questionStartTime[parseInt(qId)]) / 1000) : 0
+        })),
+        ...Object.entries(textInputAnswers)
+          .filter(([_, answer]) => answer.trim())
+          .map(([qId, answer]) => ({
+            question_id: parseInt(qId),
+            answer_id: 0,
+            time_spent: questionStartTime[parseInt(qId)] ? Math.floor((Date.now() - questionStartTime[parseInt(qId)]) / 1000) : 0
+          }))
+      ];
+
+      // Submit in batches of 20 for optimal performance
+      const batchSize = 20;
+      for (let i = 0; i < submissions.length; i += batchSize) {
+        const batch = submissions.slice(i, i + batchSize);
+        await Promise.allSettled(batch.map(answer => 
+          submitAnswer(state.attemptId, answer).catch(err => 
+            console.warn('Answer submission failed:', err)
+          )
+        ));
+      }
+
+      // Complete attempt
+      await completeExamAttempt(state.attemptId);
+      
+      toast.success(`Practice session ${reason === 'user_exit' ? 'auto-submitted' : 'completed'} successfully!`);
+      navigate('/exam/results', { state: { attemptId: state.attemptId, autoSubmitted: reason === 'user_exit' } });
+
+    } catch (error) {
+      console.error('Auto-submit error:', error);
+      toast.error('Submission failed. Please try again.');
+      autoSubmitRef.current = false;
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedAnswers, textInputAnswers, questionStartTime, state, navigate]);
 
   // Track time spent on each question
   useEffect(() => {
