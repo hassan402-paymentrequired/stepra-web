@@ -108,6 +108,15 @@ export const startExamAttempt = async (
   return response.data;
 };
 
+export const startPracticeSession = async (data: {
+  exam_type: string;
+  subjects: Array<{ subject: string; question_count: number }>;
+  duration_minutes: number;
+}) => {
+  const response = await api.post('/practice/start', data);
+  return response.data;
+};
+
 export const submitAnswer = async (
   attemptId: number,
   data: {

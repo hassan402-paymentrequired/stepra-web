@@ -14,6 +14,9 @@ import {
 import { getApiErrorMessage } from "@/utils";
 import type { AxiosError } from "axios";
 import type { Question } from "@/apis/exam";
+import { toast } from "sonner";
+import { useScreenshotPrevention } from "@/hooks/useScreenshotPrevention";
+import { useUser } from "@/lib/auth";
 
 interface ExamScreenLocationState {
   attemptId: number;
@@ -34,6 +37,27 @@ const ExamScreen = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as ExamScreenLocationState;
+  const { data: user } = useUser();
+
+  // Screenshot prevention with user identification
+  const { isBlurred, suspiciousActivityCount } = useScreenshotPrevention({
+    enabled: true,
+    strictMode: true,
+    logToBackend: true,
+    attemptId: state?.attemptId,
+    watermarkText: user ? `${user.name} - ${user.email} - Practice Session` : 'CONFIDENTIAL - PRACTICE SESSION',
+    onScreenshotAttempt: () => {
+      console.warn('Screenshot attempt detected for user:', user?.email, 'in attempt:', state?.attemptId);
+    },
+    onSuspiciousActivity: (type) => {
+      console.warn('Suspicious activity detected:', type, 'by user:', user?.email, 'in attempt:', state?.attemptId);
+      
+      // Show escalating warnings based on activity count
+      if (suspiciousActivityCount >= 5) {
+        toast.error('⚠️ Multiple security violations detected. Practice session is being monitored.');
+      }
+    },
+  });
 
   const [subjectsQuestions] = useState<Record<string, Question[]>>(
     state?.subjectsQuestions || {}
@@ -474,7 +498,7 @@ const ExamScreen = () => {
     : null;
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-background">
+    <div className="flex flex-col h-screen overflow-hidden bg-background exam-content">
       {/* Header with Timer and Subject Selector */}
       <div className="border-b bg-card p-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
