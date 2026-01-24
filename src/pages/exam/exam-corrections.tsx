@@ -266,10 +266,10 @@ const ExamCorrections = () => {
           <div className="w-10" /> {/* Spacer for alignment */}
         </div>
 
-        <p className="text-xs text-center text-muted-foreground mt-2">
+        {/* <p className="text-xs text-center text-muted-foreground mt-2">
           Question {currentQuestionIndex + 1} of {totalQuestionsForSubject} (
           {currentSubject})
-        </p>
+        </p> */}
       </div>
 
       {/* Subject Selection Modal */}

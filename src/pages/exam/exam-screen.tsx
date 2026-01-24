@@ -1,15 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router";
-import { Button, Input } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { submitAnswer, completeExamAttempt } from "@/apis/exam";
 import {
-  Clock,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  Check,
-  Calculator,
-  X,
 } from "lucide-react";
 import { getApiErrorMessage } from "@/utils";
 import type { AxiosError } from "axios";
@@ -17,6 +12,12 @@ import type { Question } from "@/apis/exam";
 import { toast } from "sonner";
 import { useScreenshotPrevention } from "@/hooks/useScreenshotPrevention";
 import { useUser } from "@/lib/auth";
+import { ExamHeader } from "./components/ExamHeader";
+import { QuestionDisplay } from "./components/QuestionDisplay";
+import { AnswerOptions } from "./components/AnswerOptions";
+import { CalculatorModal } from "./components/CalculatorModal";
+import { SubjectSelectorModal } from "./components/SubjectSelectorModal";
+import { ExamNavigation } from "./components/ExamNavigation";
 
 interface ExamScreenLocationState {
   attemptId: number;
@@ -336,6 +337,7 @@ const ExamScreen = () => {
   // Refs for performance optimization
   const submitTimeoutRef = useRef<NodeJS.Timeout>();
   const autoSubmitRef = useRef(false);
+  const hasSubmittedOnUnmount = useRef(false);
 
   // Core state
   const [subjectsQuestions] = useState<Record<string, Question[]>>(
@@ -623,6 +625,61 @@ const ExamScreen = () => {
     return () => clearTimeout(timer);
   }, [timeRemaining]);
 
+  // Submit exam on unmount (cleanup)
+  useEffect(() => {
+    return () => {
+      // Only submit if we haven't already submitted and we have an attempt
+      if (!hasSubmittedOnUnmount.current && state?.attemptId && !autoSubmitRef.current) {
+        hasSubmittedOnUnmount.current = true;
+        
+        // Submit all remaining answers and complete the exam
+        const submissions = [
+          ...Object.entries(selectedAnswers).map(([qId, aId]) => ({
+            question_id: parseInt(qId),
+            answer_id: typeof aId === 'number' ? aId : 0,
+            time_spent: questionStartTime[parseInt(qId)] ? Math.floor((Date.now() - questionStartTime[parseInt(qId)]) / 1000) : 0
+          })),
+          ...Object.entries(textInputAnswers)
+            .filter(([_, answer]) => answer.trim())
+            .map(([qId, answer]) => ({
+              question_id: parseInt(qId),
+              answer_id: 0,
+              time_spent: questionStartTime[parseInt(qId)] ? Math.floor((Date.now() - questionStartTime[parseInt(qId)]) / 1000) : 0
+            }))
+        ];
+
+        // Submit in batches using sendBeacon for reliability
+        const batchSize = 20;
+        for (let i = 0; i < submissions.length; i += batchSize) {
+          const batch = submissions.slice(i, i + batchSize);
+          const data = JSON.stringify({ answers: batch });
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon(
+              `/api/exam-attempts/${state.attemptId}/submit-answer`,
+              new Blob([data], { type: 'application/json' })
+            );
+          }
+        }
+
+        // Complete the attempt
+        const completeData = JSON.stringify({
+          subjects: state.subjects?.map((subject) => ({
+            subject,
+            question_count: subjectsQuestions[subject]?.length || 0,
+          })),
+          duration_minutes: state.timeMinutes,
+        });
+        
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(
+            `/api/exam-attempts/${state.attemptId}/complete`,
+            new Blob([completeData], { type: 'application/json' })
+          );
+        }
+      }
+    };
+  }, [state?.attemptId, selectedAnswers, textInputAnswers, questionStartTime, subjectsQuestions, state?.subjects, state?.timeMinutes]);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -849,6 +906,70 @@ const ExamScreen = () => {
     [calculatorWaitingForNewValue]
   );
 
+  // Calculator handlers for the modal component
+  const handleCalculatorClear = () => {
+    setCalculatorDisplay("0");
+    setCalculatorPreviousValue(null);
+    setCalculatorOperation(null);
+    setCalculatorWaitingForNewValue(false);
+  };
+
+  const handleCalculatorBackspace = () => {
+    if (calculatorDisplay.length > 1) {
+      setCalculatorDisplay(calculatorDisplay.slice(0, -1));
+    } else {
+      setCalculatorDisplay("0");
+    }
+  };
+
+  const handleCalculatorPercent = () => {
+    const value = parseFloat(calculatorDisplay) / 100;
+    setCalculatorDisplay(value.toString());
+  };
+
+  const handleCalculatorOperation = (op: string) => {
+    const current = parseFloat(calculatorDisplay);
+    if (
+      calculatorPreviousValue !== null &&
+      calculatorOperation &&
+      !calculatorWaitingForNewValue
+    ) {
+      const result = calculateResult();
+      setCalculatorDisplay(result.toString());
+      setCalculatorPreviousValue(result);
+    } else {
+      setCalculatorPreviousValue(current);
+    }
+    setCalculatorOperation(op);
+    setCalculatorWaitingForNewValue(true);
+  };
+
+  const handleCalculatorEquals = () => {
+    if (calculatorPreviousValue !== null && calculatorOperation) {
+      const result = calculateResult();
+      setCalculatorDisplay(result.toString());
+      setCalculatorPreviousValue(null);
+      setCalculatorOperation(null);
+      setCalculatorWaitingForNewValue(false);
+    }
+  };
+
+  const handleCalculatorToggleSign = () => {
+    if (calculatorDisplay !== "0") {
+      setCalculatorDisplay(
+        calculatorDisplay.startsWith("-")
+          ? calculatorDisplay.slice(1)
+          : "-" + calculatorDisplay
+      );
+    }
+  };
+
+  const handleCalculatorDecimal = () => {
+    if (!calculatorDisplay.includes(".")) {
+      setCalculatorDisplay(calculatorDisplay + ".");
+    }
+  };
+
   if (
     !state ||
     !subjectsQuestions ||
@@ -893,347 +1014,38 @@ const ExamScreen = () => {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background exam-content">
       {/* Header with Timer and Subject Selector */}
-      <div className="border-b bg-card p-4 sticky top-0 z-10">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={handleLeaveExam}
-            className="p-2 hover:bg-muted rounded"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-
-          {/* Subject Selector */}
-          <button
-            onClick={() => setShowSubjectModal(true)}
-            className="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-muted"
-          >
-            <span className="font-semibold">{currentSubject}</span>
-            <ChevronDown className="h-4 w-4" />
-          </button>
-
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setShowCalculator(true)}
-              className="p-2 hover:bg-muted rounded transition-colors"
-              title="Calculator"
-            >
-              <Calculator className="h-5 w-5" />
-            </button>
-            <div
-              className={`flex items-center gap-2 ${
-                isTimeLow ? "text-destructive" : ""
-              }`}
-            >
-              <Clock
-                className={`h-5 w-5 ${isTimeLow ? "text-destructive" : ""}`}
-              />
-              <span
-                className={`font-semibold ${
-                  isTimeLow ? "text-destructive" : ""
-                }`}
-              >
-                {formatTime(timeRemaining)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <p className="text-xs text-center text-muted-foreground mt-2">
-          Question {currentQuestionIndex + 1} of {totalQuestionsForSubject} (
-          {currentSubject})
-        </p>
-      </div>
+      <ExamHeader
+        currentSubject={currentSubject}
+        currentQuestionIndex={currentQuestionIndex}
+        totalQuestionsForSubject={totalQuestionsForSubject}
+        timeRemaining={timeRemaining}
+        onSubjectClick={() => setShowSubjectModal(true)}
+        onCalculatorClick={() => setShowCalculator(true)}
+      />
 
       {/* Calculator Modal */}
-      {showCalculator && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-background rounded-xl shadow-2xl w-full max-w-sm border-2 border-border">
-            <div className="p-4 border-b flex justify-between items-center">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Calculator className="h-5 w-5" />
-                Calculator
-              </h3>
-              <button
-                onClick={() => setShowCalculator(false)}
-                className="p-1 hover:bg-muted rounded transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Display */}
-            <div className="p-6 bg-muted/30 border-b">
-              <div className="text-right">
-                <div className="text-4xl font-mono font-bold min-h-12 flex items-center justify-end break-all">
-                  {calculatorDisplay}
-                </div>
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div className="p-4 grid grid-cols-4 gap-3">
-              {/* Row 1: Clear, Backspace, %, ÷ */}
-              <button
-                onClick={() => {
-                  setCalculatorDisplay("0");
-                  setCalculatorPreviousValue(null);
-                  setCalculatorOperation(null);
-                  setCalculatorWaitingForNewValue(false);
-                }}
-                className="p-4 bg-destructive/10 hover:bg-destructive/20 text-destructive font-semibold rounded-lg transition-colors"
-              >
-                C
-              </button>
-              <button
-                onClick={() => {
-                  if (calculatorDisplay.length > 1) {
-                    setCalculatorDisplay(calculatorDisplay.slice(0, -1));
-                  } else {
-                    setCalculatorDisplay("0");
-                  }
-                }}
-                className="p-4 bg-muted hover:bg-muted/80 font-semibold rounded-lg transition-colors"
-              >
-                ⌫
-              </button>
-              <button
-                onClick={() => {
-                  const value = parseFloat(calculatorDisplay) / 100;
-                  setCalculatorDisplay(value.toString());
-                }}
-                className="p-4 bg-muted hover:bg-muted/80 font-semibold rounded-lg transition-colors"
-              >
-                %
-              </button>
-              <button
-                onClick={() => {
-                  const current = parseFloat(calculatorDisplay);
-                  if (
-                    calculatorPreviousValue !== null &&
-                    calculatorOperation &&
-                    !calculatorWaitingForNewValue
-                  ) {
-                    const result = calculateResult();
-                    setCalculatorDisplay(result.toString());
-                    setCalculatorPreviousValue(result);
-                  } else {
-                    setCalculatorPreviousValue(current);
-                  }
-                  setCalculatorOperation("÷");
-                  setCalculatorWaitingForNewValue(true);
-                }}
-                className="p-4 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-lg transition-colors"
-              >
-                ÷
-              </button>
-
-              {/* Row 2: 7, 8, 9, × */}
-              <button
-                onClick={() => handleCalculatorNumber("7")}
-                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
-              >
-                7
-              </button>
-              <button
-                onClick={() => handleCalculatorNumber("8")}
-                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
-              >
-                8
-              </button>
-              <button
-                onClick={() => handleCalculatorNumber("9")}
-                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
-              >
-                9
-              </button>
-              <button
-                onClick={() => {
-                  const current = parseFloat(calculatorDisplay);
-                  if (
-                    calculatorPreviousValue !== null &&
-                    calculatorOperation &&
-                    !calculatorWaitingForNewValue
-                  ) {
-                    const result = calculateResult();
-                    setCalculatorDisplay(result.toString());
-                    setCalculatorPreviousValue(result);
-                  } else {
-                    setCalculatorPreviousValue(current);
-                  }
-                  setCalculatorOperation("×");
-                  setCalculatorWaitingForNewValue(true);
-                }}
-                className="p-4 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-lg transition-colors"
-              >
-                ×
-              </button>
-
-              {/* Row 3: 4, 5, 6, - */}
-              <button
-                onClick={() => handleCalculatorNumber("4")}
-                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
-              >
-                4
-              </button>
-              <button
-                onClick={() => handleCalculatorNumber("5")}
-                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
-              >
-                5
-              </button>
-              <button
-                onClick={() => handleCalculatorNumber("6")}
-                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
-              >
-                6
-              </button>
-              <button
-                onClick={() => {
-                  const current = parseFloat(calculatorDisplay);
-                  if (
-                    calculatorPreviousValue !== null &&
-                    calculatorOperation &&
-                    !calculatorWaitingForNewValue
-                  ) {
-                    const result = calculateResult();
-                    setCalculatorDisplay(result.toString());
-                    setCalculatorPreviousValue(result);
-                  } else {
-                    setCalculatorPreviousValue(current);
-                  }
-                  setCalculatorOperation("-");
-                  setCalculatorWaitingForNewValue(true);
-                }}
-                className="p-4 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-lg transition-colors"
-              >
-                −
-              </button>
-
-              {/* Row 4: 1, 2, 3, + */}
-              <button
-                onClick={() => handleCalculatorNumber("1")}
-                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
-              >
-                1
-              </button>
-              <button
-                onClick={() => handleCalculatorNumber("2")}
-                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
-              >
-                2
-              </button>
-              <button
-                onClick={() => handleCalculatorNumber("3")}
-                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
-              >
-                3
-              </button>
-              <button
-                onClick={() => {
-                  const current = parseFloat(calculatorDisplay);
-                  if (
-                    calculatorPreviousValue !== null &&
-                    calculatorOperation &&
-                    !calculatorWaitingForNewValue
-                  ) {
-                    const result = calculateResult();
-                    setCalculatorDisplay(result.toString());
-                    setCalculatorPreviousValue(result);
-                  } else {
-                    setCalculatorPreviousValue(current);
-                  }
-                  setCalculatorOperation("+");
-                  setCalculatorWaitingForNewValue(true);
-                }}
-                className="p-4 bg-primary/10 hover:bg-primary/20 text-primary font-semibold rounded-lg transition-colors"
-              >
-                +
-              </button>
-
-              {/* Row 5: +/-, 0, ., = */}
-              <button
-                onClick={() => {
-                  if (calculatorDisplay !== "0") {
-                    setCalculatorDisplay(
-                      calculatorDisplay.startsWith("-")
-                        ? calculatorDisplay.slice(1)
-                        : "-" + calculatorDisplay
-                    );
-                  }
-                }}
-                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
-              >
-                +/-
-              </button>
-              <button
-                onClick={() => handleCalculatorNumber("0")}
-                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
-              >
-                0
-              </button>
-              <button
-                onClick={() => {
-                  if (!calculatorDisplay.includes(".")) {
-                    setCalculatorDisplay(calculatorDisplay + ".");
-                  }
-                }}
-                className="p-4 bg-card hover:bg-muted font-semibold rounded-lg transition-colors border"
-              >
-                .
-              </button>
-              <button
-                onClick={() => {
-                  if (calculatorPreviousValue !== null && calculatorOperation) {
-                    const result = calculateResult();
-                    setCalculatorDisplay(result.toString());
-                    setCalculatorPreviousValue(null);
-                    setCalculatorOperation(null);
-                    setCalculatorWaitingForNewValue(false);
-                  }
-                }}
-                className="p-4 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition-colors col-span-1"
-              >
-                =
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CalculatorModal
+        isOpen={showCalculator}
+        display={calculatorDisplay}
+        onClose={() => setShowCalculator(false)}
+        onClear={handleCalculatorClear}
+        onBackspace={handleCalculatorBackspace}
+        onPercent={handleCalculatorPercent}
+        onNumber={handleCalculatorNumber}
+        onOperation={handleCalculatorOperation}
+        onEquals={handleCalculatorEquals}
+        onToggleSign={handleCalculatorToggleSign}
+        onDecimal={handleCalculatorDecimal}
+      />
 
       {/* Subject Selection Modal */}
-      {showSubjectModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end z-50">
-          <div className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="font-semibold">Select Subject</h3>
-              <button onClick={() => setShowSubjectModal(false)}>
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="overflow-y-auto p-4">
-              {Object.keys(subjectsQuestions).map((subject) => {
-                const isCurrent = subject === currentSubject;
-                return (
-                  <button
-                    key={subject}
-                    onClick={() => handleSwitchSubject(subject)}
-                    className={`w-full p-4 border rounded-lg mb-3 text-left ${
-                      isCurrent ? "border-primary bg-primary/10" : ""
-                    }`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-semibold">{subject}</p>
-                      </div>
-                      {isCurrent && <Check className="h-5 w-5 text-primary" />}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      <SubjectSelectorModal
+        isOpen={showSubjectModal}
+        subjects={Object.keys(subjectsQuestions)}
+        currentSubject={currentSubject}
+        onClose={() => setShowSubjectModal(false)}
+        onSelectSubject={handleSwitchSubject}
+      />
 
       {/* Question Content */}
       <div className="flex-1 overflow-y-auto p-6">
@@ -1243,128 +1055,27 @@ const ExamScreen = () => {
             Question {currentQuestionIndex + 1}
           </p>
 
-          {/* Question Image */}
-          {imageUrl && (
-            <div className="mb-6">
-              <img
-                src={imageUrl}
-                alt="Question diagram"
-                className="max-w-full h-auto rounded-lg border"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
-            </div>
-          )}
+          {/* Question Display */}
+          <QuestionDisplay
+            questionText={currentQuestion.question_text}
+            imageUrl={imageUrl}
+          />
 
-          {/* Question Text */}
-          <div className="mb-8">
-            <p className="text-xl leading-relaxed">
-              {currentQuestion.question_text}
-            </p>
-          </div>
-
-          {/* Answers based on question type */}
-          <div className="space-y-4">
-            {currentQuestion.question_type === "multiple_choice" &&
-              currentQuestion.answers && (
-                <>
-                  {currentQuestion.answers.map((answer) => {
-                    const isSelected = selectedAnswerId === answer.id;
-                    return (
-                      <label
-                        key={answer.id}
-                        className={`w-full p-4 text-left flex items-center gap-3 transition-all border-b cursor-pointer ${
-                          isSelected
-                            ? "text-primary font-medium"
-                            : "hover:text-primary"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name={`question-${currentQuestion.id}`}
-                          checked={isSelected}
-                          onChange={() => handleSelectAnswer(answer.id)}
-                          className="w-5 h-5 text-primary border-gray-300 focus:ring-primary"
-                        />
-                        <span className="font-semibold min-w-8">
-                          {answer.order}.
-                        </span>
-                        <span className="flex-1">{answer.answer_text}</span>
-                      </label>
-                    );
-                  })}
-                </>
-              )}
-
-            {currentQuestion.question_type === "true_false" && (
-              <div className="flex gap-4">
-                <button
-                  onClick={() => {
-                    // For true/false, we need to find the answer ID for "True"
-                    // This assumes answers array has True/False options
-                    const trueAnswer = currentQuestion.answers?.find(
-                      (a) => a.answer_text.toLowerCase() === "true"
-                    );
-                    if (trueAnswer) {
-                      handleSelectAnswer(trueAnswer.id);
-                    }
-                  }}
-                  className={`flex-1 p-6 text-lg font-semibold border-2 rounded-lg transition-all ${
-                    selectedAnswerId &&
-                    currentQuestion.answers
-                      ?.find((a) => a.id === selectedAnswerId)
-                      ?.answer_text.toLowerCase() === "true"
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  True
-                </button>
-                <button
-                  onClick={() => {
-                    const falseAnswer = currentQuestion.answers?.find(
-                      (a) => a.answer_text.toLowerCase() === "false"
-                    );
-                    if (falseAnswer) {
-                      handleSelectAnswer(falseAnswer.id);
-                    }
-                  }}
-                  className={`flex-1 p-6 text-lg font-semibold border-2 rounded-lg transition-all ${
-                    selectedAnswerId &&
-                    currentQuestion.answers
-                      ?.find((a) => a.id === selectedAnswerId)
-                      ?.answer_text.toLowerCase() === "false"
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  False
-                </button>
-              </div>
-            )}
-
-            {currentQuestion.question_type === "text_input" && (
-              <Input
-                type="text"
-                value={textAnswer}
-                onChange={(e) => handleTextInputChange(e.target.value)}
-                onBlur={handleTextInputBlur}
-                placeholder="Enter your answer"
-                className="text-lg p-4"
-              />
-            )}
-
-            {currentQuestion.question_type === "numeric_input" && (
-              <Input
-                type="number"
-                value={textAnswer}
-                onChange={(e) => handleTextInputChange(e.target.value)}
-                onBlur={handleTextInputBlur}
-                placeholder="Enter your answer"
-                className="text-lg p-4"
-              />
-            )}
+          {/* Answer Options */}
+          <div className="mt-8">
+            <AnswerOptions
+              question={currentQuestion}
+              selectedAnswerId={selectedAnswerId as number | undefined}
+              textAnswer={textAnswer}
+              onAnswerSelect={handleSelectAnswer}
+              onTextAnswerChange={(value) => {
+                handleTextInputChange(value);
+                // Also handle blur for text inputs
+                if (currentQuestion.question_type === "text_input" || currentQuestion.question_type === "numeric_input") {
+                  setTimeout(() => handleTextInputBlur(), 100);
+                }
+              }}
+            />
           </div>
         </div>
       </div>
@@ -1401,66 +1112,20 @@ const ExamScreen = () => {
           </div>
 
           {/* Navigation Buttons */}
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentQuestionIndex === 0}
-              className="flex-1"
-            >
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Previous
-            </Button>
-
-            {isLastQuestionInSubject && allSubjectsCompleted ? (
-              <Button
-                onClick={() => handleCompleteExam(false)}
-                disabled={loading}
-                className="flex-1"
-              >
-                {loading ? "Submitting..." : "Submit Exam"}
-              </Button>
-            ) : isLastQuestionInSubject ? (
-              <Button
-                onClick={() => {
-                  // Find next incomplete subject
-                  const subjects = Object.keys(subjectsQuestions);
-                  const currentIndex = subjects.indexOf(currentSubject);
-                  const nextSubjects = subjects.slice(currentIndex + 1);
-                  const incompleteSubject = nextSubjects.find((subject) => {
-                    const questions = subjectsQuestions[subject] || [];
-                    return questions.some((q) => {
-                      if (
-                        q.question_type === "multiple_choice" ||
-                        q.question_type === "true_false"
-                      ) {
-                        return selectedAnswers[q.id] === undefined;
-                      } else {
-                        return (
-                          !textInputAnswers[q.id] ||
-                          textInputAnswers[q.id] === ""
-                        );
-                      }
-                    });
-                  });
-
-                  if (incompleteSubject) {
-                    handleSwitchSubject(incompleteSubject);
-                  } else {
-                    handleCompleteExam(false);
-                  }
-                }}
-                className="flex-1"
-              >
-                Next Subject
-              </Button>
-            ) : (
-              <Button onClick={handleNext} className="flex-1">
-                Next
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </Button>
-            )}
-          </div>
+          <ExamNavigation
+            currentQuestionIndex={currentQuestionIndex}
+            isLastQuestionInSubject={isLastQuestionInSubject}
+            allSubjectsCompleted={allSubjectsCompleted}
+            subjectsQuestions={subjectsQuestions}
+            currentSubject={currentSubject}
+            selectedAnswers={selectedAnswers as Record<number, number>}
+            textInputAnswers={textInputAnswers}
+            loading={loading}
+            onPrevious={handlePrevious}
+            onNext={handleNext}
+            onSwitchSubject={handleSwitchSubject}
+            onSubmit={() => handleCompleteExam(false)}
+          />
 
           {allSubjectsCompleted && !isLastQuestionInSubject && (
             <Button
