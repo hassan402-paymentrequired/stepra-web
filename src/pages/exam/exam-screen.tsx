@@ -276,7 +276,7 @@ const ExamScreen = () => {
         pointer-events: ${isBlurred ? 'none' : 'auto'};
       }
       
-      /* Always allow pointer events on interactive elements */
+      /* Always allow pointer events on interactive elements - MUST be above watermark */
       button, 
       input, 
       textarea, 
@@ -289,6 +289,17 @@ const ExamScreen = () => {
       .calculator,
       .calculator * {
         pointer-events: auto !important;
+        position: relative !important;
+        z-index: 10002 !important;
+        isolation: isolate !important;
+      }
+      
+      /* Specifically ensure answer option buttons are clickable */
+      .exam-content button[type="button"] {
+        pointer-events: auto !important;
+        z-index: 10002 !important;
+        position: relative !important;
+        cursor: pointer !important;
       }
 
       body {
@@ -665,7 +676,16 @@ const ExamScreen = () => {
 
 
   const handleSelectAnswer = async (answerId: number) => {
-    if (!currentQuestion || !state?.attemptId) return;
+    if (!currentQuestion || !state?.attemptId) {
+      console.warn('handleSelectAnswer called but missing data:', { currentQuestion, attemptId: state?.attemptId });
+      return;
+    }
+
+    console.log('handleSelectAnswer called:', { 
+      questionId: currentQuestion.id, 
+      answerId, 
+      questionType: currentQuestion.question_type 
+    });
 
     setSelectedAnswers({
       ...selectedAnswers,
@@ -990,8 +1010,8 @@ const ExamScreen = () => {
       />
 
       {/* Question Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-4xl mx-auto">
+      <div className="flex-1 overflow-y-auto p-6 relative" style={{ zIndex: 1 }}>
+        <div className="max-w-4xl mx-auto relative" style={{ zIndex: 1 }}>
           {/* Question Number */}
           <p className="text-sm text-muted-foreground mb-4">
             Question {currentQuestionIndex + 1}
@@ -1004,7 +1024,7 @@ const ExamScreen = () => {
           />
 
           {/* Answer Options */}
-          <div className="mt-8">
+          <div className="mt-8 relative" style={{ zIndex: 10001 }}>
             <AnswerOptions
               question={currentQuestion}
               selectedAnswerId={selectedAnswerId as number | undefined}

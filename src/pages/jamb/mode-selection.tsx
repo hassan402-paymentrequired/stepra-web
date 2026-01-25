@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import AppLayout from "@/components/layouts/app-layout";
-import { FileText, BookOpen } from "lucide-react";
+import { FileText, BookOpen, ArrowRight } from "lucide-react";
 
 const JAMBModeSelection = () => {
   const navigate = useNavigate();
@@ -15,46 +15,62 @@ const JAMBModeSelection = () => {
 
   return (
     <AppLayout>
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="w-full max-w-2xl px-4">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Select Question Mode</h1>
-            <p className="text-muted-foreground">
-              Choose how you want to practice JAMB questions
-            </p>
-          </div>
+      <div className="w-full max-w-7xl mx-auto space-y-4">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold mb-2">Select Question Mode</h1>
+          <p className="text-muted-foreground text-sm">
+            Choose how you want to practice JAMB questions
+          </p>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Past Questions Card */}
-            <div
-              onClick={() => handleSelectMode("past_question")}
-              className="border rounded-lg bg-card p-8 flex flex-col items-center justify-center hover:shadow-lg transition-all cursor-pointer group hover:border-primary"
-            >
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                <FileText className="h-8 w-8 text-primary" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Past Questions Card */}
+          <div
+            onClick={() => handleSelectMode("past_question")}
+            className="group relative overflow-hidden rounded-lg bg-card border border-border p-4 cursor-pointer transition-all duration-300 hover:shadow-md hover:border-primary"
+          >
+            <div className="relative z-10">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                  <FileText className="h-5 w-5 text-primary-foreground" />
+                </div>
+                <ArrowRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <h2 className="text-2xl font-bold mb-2 group-hover:text-primary transition-colors">
+              <h2 className="text-lg font-bold text-foreground mb-1.5 group-hover:text-primary transition-colors">
                 Past Questions
               </h2>
-              <p className="text-muted-foreground text-center">
+              <p className="text-muted-foreground text-xs leading-relaxed mb-3">
                 Practice with previous JAMB exam questions
               </p>
-            </div>
-
-            {/* Practice Questions Card */}
-            <div
-              onClick={() => handleSelectMode("practice")}
-              className="border rounded-lg bg-card p-8 flex flex-col items-center justify-center hover:shadow-lg transition-all cursor-pointer group hover:border-primary"
-            >
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                <BookOpen className="h-8 w-8 text-primary" />
+              <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                <span>Start practicing</span>
+                <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
               </div>
-              <h2 className="text-2xl font-bold mb-2 group-hover:text-primary transition-colors">
+            </div>
+          </div>
+
+          {/* Practice Questions Card */}
+          <div
+            onClick={() => handleSelectMode("practice")}
+            className="group relative overflow-hidden rounded-lg bg-card border border-border p-4 cursor-pointer transition-all duration-300 hover:shadow-md hover:border-primary"
+          >
+            <div className="relative z-10">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                  <BookOpen className="h-5 w-5 text-primary-foreground" />
+                </div>
+                <ArrowRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <h2 className="text-lg font-bold text-foreground mb-1.5 group-hover:text-primary transition-colors">
                 Practice Questions
               </h2>
-              <p className="text-muted-foreground text-center">
+              <p className="text-muted-foreground text-xs leading-relaxed mb-3">
                 Practice with random questions (max 4 sessions per subject)
               </p>
+              <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                <span>Start practicing</span>
+                <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
           </div>
         </div>
