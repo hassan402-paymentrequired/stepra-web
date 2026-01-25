@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import AppLayout from '@/components/layouts/app-layout';
 import { Button } from '@/components/ui';
-import { getSubjects, getPracticeQuestions, getExams, startExamAttempt, startPracticeSession } from '@/apis/exam';
+import { getSubjects, getPracticeQuestions, startPracticeSession } from '@/apis/exam';
 import { useUser } from '@/lib/auth';
 import { getSubscriptionStatus } from '@/apis/subscription';
 import { Check, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';

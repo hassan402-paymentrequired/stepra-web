@@ -2,10 +2,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { Button } from "@/components/ui";
 import { submitAnswer, completeExamAttempt } from "@/apis/exam";
-import {
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
 import { getApiErrorMessage } from "@/utils";
 import type { AxiosError } from "axios";
 import type { Question } from "@/apis/exam";
@@ -194,7 +190,7 @@ const ExamScreen = () => {
       // Store original function
       originalGetDisplayMedia = (navigator.mediaDevices as any).getDisplayMedia;
       // Override to prevent screen sharing
-      (navigator.mediaDevices as any).getDisplayMedia = async function(...args: any[]) {
+      (navigator.mediaDevices as any).getDisplayMedia = async function() {
         toast.error('Screen sharing is not allowed during practice sessions.');
         throw new Error('Screen sharing is disabled');
       };
@@ -333,9 +329,9 @@ const ExamScreen = () => {
       }
     };
   }, [isBlurred]);
-
+      
   // Refs for performance optimization
-  const submitTimeoutRef = useRef<NodeJS.Timeout>();
+  const submitTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null as unknown as ReturnType<typeof setTimeout>);
   const autoSubmitRef = useRef(false);
   const hasSubmittedOnUnmount = useRef(false);
 
@@ -413,9 +409,6 @@ const ExamScreen = () => {
     currentQuestion, 
     totalQuestionsForSubject,
     allSubjectsCompleted,
-    totalQuestions,
-    answeredQuestions,
-    progressPercentage 
   } = memoizedData;
 
   // Optimized auto-submit and exit warning system
@@ -428,22 +421,12 @@ const ExamScreen = () => {
       e.preventDefault();
       e.returnValue = message;
 
-      // Auto-complete the attempt (answers are already submitted as user progresses)
-      if (!isSubmitting && state?.attemptId && !autoSubmitRef.current) {
-        isSubmitting = true;
-        autoSubmitRef.current = true;
+        // Auto-complete the attempt (answers are already submitted as user progresses)
+        if (!isSubmitting && state?.attemptId && !autoSubmitRef.current) {
+          isSubmitting = true;
+          autoSubmitRef.current = true;
 
-        // Submit any remaining answers first, then complete
-        const remainingAnswers = [
-          ...Object.entries(selectedAnswers)
-            .filter(([qId, aId]) => aId !== undefined && typeof aId === 'number')
-            .map(([qId, aId]) => ({
-              question_id: parseInt(qId),
-              answer_id: aId as number,
-            })),
-        ];
-
-        // Use sendBeacon for reliable submission during page unload
+          // Use sendBeacon for reliable submission during page unload
         const completeData = {
           subjects: state.subjects?.map(subject => ({
             subject,
@@ -520,8 +503,8 @@ const ExamScreen = () => {
           time_spent: questionStartTime[parseInt(qId)] ? Math.floor((Date.now() - questionStartTime[parseInt(qId)]) / 1000) : 0
         })),
         ...Object.entries(textInputAnswers)
-          .filter(([_, answer]) => answer.trim())
-          .map(([qId, answer]) => ({
+          .filter(([, answer]) => answer.trim())
+          .map(([qId]) => ({
             question_id: parseInt(qId),
             answer_id: 0,
             time_spent: questionStartTime[parseInt(qId)] ? Math.floor((Date.now() - questionStartTime[parseInt(qId)]) / 1000) : 0
@@ -680,13 +663,6 @@ const ExamScreen = () => {
     };
   }, [state?.attemptId, selectedAnswers, textInputAnswers, questionStartTime, subjectsQuestions, state?.subjects, state?.timeMinutes]);
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
-  };
 
   const handleSelectAnswer = async (answerId: number) => {
     if (!currentQuestion || !state?.attemptId) return;
@@ -999,7 +975,6 @@ const ExamScreen = () => {
   const textAnswer = textInputAnswers[currentQuestion.id] || "";
   const isLastQuestionInSubject =
     currentQuestionIndex === totalQuestionsForSubject - 1;
-  const isTimeLow = timeRemaining < 300; // Less than 5 minutes
 
   // Get base URL for images
   const baseUrl = import.meta.env.VITE_BASE_URL || "http://localhost:8000";

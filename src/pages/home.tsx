@@ -4,7 +4,6 @@ import { useUser } from "@/lib/auth";
 import AppLayout from "@/components/layouts/app-layout";
 import { getLeaderboard, type LeaderboardUser } from "@/apis/leaderboard";
 import {
-  PartyPopper,
   BookOpen,
   GraduationCap,
   TrendingUp,
@@ -168,7 +167,7 @@ const Home = () => {
 
           {topPerformers.length > 0 ? (
             <div className="space-y-2">
-              {topPerformers.slice(0, 5).map((performer, index) => {
+              {topPerformers.slice(0, 5).map((performer) => {
                 const getRankIcon = () => {
                   if (performer.rank === 1) {
                     return <Medal className="h-4 w-4 text-yellow-500" />;

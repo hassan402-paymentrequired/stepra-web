@@ -81,10 +81,10 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
       document.body.appendChild(watermark);
       
       // Additional corner watermarks for Mac screenshot protection
-      const cornerWatermarks = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
-      cornerWatermarks.positions = [];
+      const cornerPositions = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+      const cornerElements: HTMLElement[] = [];
       
-      cornerWatermarks.forEach((position, index) => {
+      cornerPositions.forEach((position, index) => {
         const corner = document.createElement('div');
         const [vertical, horizontal] = position.split('-');
         corner.style.cssText = `
@@ -103,11 +103,11 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
         `;
         corner.textContent = `${watermarkText} - ${new Date().toISOString()}`;
         document.body.appendChild(corner);
-        cornerWatermarks.positions.push(corner);
+        cornerElements.push(corner);
       });
       
       watermarkRef.current = watermark;
-      (watermarkRef.current as any).cornerElements = cornerWatermarks.positions;
+      (watermarkRef.current as any).cornerElements = cornerElements;
     };
 
     // Add protective CSS

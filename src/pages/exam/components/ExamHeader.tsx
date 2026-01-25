@@ -1,5 +1,4 @@
 import { Clock, ChevronDown, Calculator } from "lucide-react";
-import { Button } from "@/components/ui";
 
 interface ExamHeaderProps {
   currentSubject: string;
@@ -70,10 +69,7 @@ export const ExamHeader = ({
         </div>
       </div>
 
-      {/* <p className="text-xs text-center text-muted-foreground mt-2">
-        Question {currentQuestionIndex + 1} of {totalQuestionsForSubject} (
-        {currentSubject})
-      </p> */}
+    
     </div>
   );
 };

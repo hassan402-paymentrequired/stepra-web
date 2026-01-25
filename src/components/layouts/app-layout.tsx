@@ -38,7 +38,7 @@ const getCurrentWeekDays = () => {
 
 const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
   const {
-    token: { colorBgContainer, borderRadiusLG, colorBorder, colorText, colorTextSecondary },
+    token: { colorBgContainer, borderRadiusLG, colorBorder, colorText },
   } = theme.useToken();
 
   const { data: user } = useUser();
