@@ -180,7 +180,7 @@ const ExamCorrections = () => {
               order: 0,
               answers: answers,
               explanation: result.question.explanation,
-              expected_answer: result.question.expected_answer,
+              expected_answer: result.question.expected_answer || '',
             };
           }
         });

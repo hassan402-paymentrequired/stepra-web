@@ -188,6 +188,21 @@ const Subscription = () => {
             </div>
           )}
 
+          {/* Error Message if no plan available */}
+          {!plan && !loading && (
+            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <Shield className="h-6 w-6 text-yellow-600" />
+                <h3 className="text-xl font-semibold text-yellow-800">
+                  No Subscription Plan Available
+                </h3>
+              </div>
+              <p className="text-yellow-700">
+                There are currently no active subscription plans. Please contact support or check back later.
+              </p>
+            </div>
+          )}
+
           {/* Subscription Plan */}
           {plan && (
             <div className="bg-card border rounded-lg p-8 mb-6">

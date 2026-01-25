@@ -63,10 +63,23 @@ export interface VerifyPaymentResponse {
 
 export const getSubscriptionPlans = async (): Promise<{
   success: boolean;
-  data: SubscriptionPlan;
+  data: SubscriptionPlan | null;
+  message?: string;
 }> => {
-  const response = await api.get('/subscriptions/plans');
-  return response.data;
+  try {
+    const response = await api.get('/subscriptions/plans');
+    return response.data;
+  } catch (error: any) {
+    // Handle 404 or other errors gracefully
+    if (error.response?.status === 404) {
+      return {
+        success: false,
+        data: null,
+        message: error.response?.data?.message || 'No subscription plan available.',
+      };
+    }
+    throw error;
+  }
 };
 
 export const getSubscriptionStatus = async (): Promise<{
