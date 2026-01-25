@@ -81,25 +81,25 @@ const Home = () => {
     <AppLayout>
       <div className="w-full max-w-7xl mx-auto space-y-4">
         {/* Hero Welcome Section */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-3 md:p-4 text-white">
+        <div className="relative overflow-hidden rounded-lg bg-primary p-3 md:p-4 text-primary-foreground">
           <div className="relative z-10">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <GraduationCap className="h-5 w-5" />
+              <div className="w-10 h-10 rounded-full bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center">
+                <GraduationCap className="h-5 w-5 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-xl md:text-2xl font-bold">
+                <h1 className="text-xl md:text-2xl font-bold text-primary-foreground">
                   Welcome back, {user?.name?.split(" ")[0]}!
                 </h1>
-                <p className="text-white/80 text-sm">
+                <p className="text-primary-foreground/80 text-sm">
                   Ready to ace your exams?
                 </p>
               </div>
             </div>
           </div>
           {/* Decorative background elements */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary-foreground/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary-foreground/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
         </div>
 
         {/* Practice Cards Grid */}
@@ -107,22 +107,22 @@ const Home = () => {
           {/* Practice JAMB Card */}
           <div
             onClick={() => navigate("/jamb/mode-selection")}
-            className="group relative overflow-hidden rounded-lg bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200/50 dark:border-blue-800/50 p-4 cursor-pointer transition-all duration-300 hover:shadow-md hover:border-blue-400 dark:hover:border-blue-600"
+            className="group relative overflow-hidden rounded-lg bg-card border border-border p-4 cursor-pointer transition-all duration-300 hover:shadow-md hover:border-primary"
           >
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-                  <BookOpen className="h-5 w-5 text-white" />
+                <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                  <BookOpen className="h-5 w-5 text-primary-foreground" />
                 </div>
-                <ArrowRight className="h-4 w-4 text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ArrowRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <h2 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-1.5 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+              <h2 className="text-lg font-bold text-foreground mb-1.5 group-hover:text-primary transition-colors">
                 Practice JAMB
               </h2>
-              <p className="text-blue-700/80 dark:text-blue-300/80 text-xs leading-relaxed mb-3">
+              <p className="text-muted-foreground text-xs leading-relaxed mb-3">
                 Master JAMB past questions and boost your scores
               </p>
-              <div className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
                 <span>Start practicing</span>
                 <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
               </div>
@@ -132,22 +132,22 @@ const Home = () => {
           {/* Practice DLI Card */}
           <div
             onClick={() => navigate("/dli/practice")}
-            className="group relative overflow-hidden rounded-lg bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20 border border-purple-200/50 dark:border-purple-800/50 p-4 cursor-pointer transition-all duration-300 hover:shadow-md hover:border-purple-400 dark:hover:border-purple-600"
+            className="group relative overflow-hidden rounded-lg bg-card border border-border p-4 cursor-pointer transition-all duration-300 hover:shadow-md hover:border-primary"
           >
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-                  <GraduationCap className="h-5 w-5 text-white" />
+                <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                  <GraduationCap className="h-5 w-5 text-primary-foreground" />
                 </div>
-                <ArrowRight className="h-4 w-4 text-purple-600 dark:text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ArrowRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <h2 className="text-lg font-bold text-purple-900 dark:text-purple-100 mb-1.5 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors">
+              <h2 className="text-lg font-bold text-foreground mb-1.5 group-hover:text-primary transition-colors">
                 Practice DLI
               </h2>
-              <p className="text-purple-700/80 dark:text-purple-300/80 text-xs leading-relaxed mb-3">
+              <p className="text-muted-foreground text-xs leading-relaxed mb-3">
                 Enhance your skills with DLI practice questions
               </p>
-              <div className="flex items-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
                 <span>Start practicing</span>
                 <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
               </div>
@@ -158,8 +158,8 @@ const Home = () => {
         {/* Leaderboard Section */}
         <div className="rounded-lg bg-card border border-border/50 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-sm">
-              <Trophy className="h-4 w-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
+              <Trophy className="h-4 w-4 text-primary-foreground" />
             </div>
             <div>
               <h3 className="text-base font-bold flex items-center gap-1.5">
@@ -188,11 +188,11 @@ const Home = () => {
 
                 const getRankBg = () => {
                   if (performer.rank === 1) {
-                    return "bg-gradient-to-r from-yellow-50 to-yellow-100/50 dark:from-yellow-950/20 dark:to-yellow-900/10 border-yellow-200 dark:border-yellow-800";
+                    return "bg-card border-border";
                   } else if (performer.rank === 2) {
-                    return "bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-950/20 dark:to-gray-900/10 border-gray-200 dark:border-gray-800";
+                    return "bg-card border-border";
                   } else if (performer.rank === 3) {
-                    return "bg-gradient-to-r from-orange-50 to-orange-100/50 dark:from-orange-950/20 dark:to-orange-900/10 border-orange-200 dark:border-orange-800";
+                    return "bg-card border-border";
                   }
                   return "bg-muted/30 border-border";
                 };
