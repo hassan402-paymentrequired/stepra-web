@@ -90,15 +90,8 @@ export const AnswerOptions = ({
           type="button"
           data-answer-id={trueAnswer?.id ?? virtualTrueId}
           data-question-id={question.id}
-          onClick={(e) => {
+          onClick={() => {
             const answerId = trueAnswer?.id ?? virtualTrueId;
-            console.log('True button clicked', { 
-              trueAnswer, 
-              answerId,
-              questionId: question.id,
-              selectedAnswerId,
-              usingVirtual: !trueAnswer
-            });
             onAnswerSelect(answerId);
           }}
           className={`flex-1 p-6 text-lg font-semibold border-2 rounded-lg transition-all relative cursor-pointer ${
@@ -120,15 +113,8 @@ export const AnswerOptions = ({
           type="button"
           data-answer-id={falseAnswer?.id ?? virtualFalseId}
           data-question-id={question.id}
-          onClick={(e) => {
+          onClick={() => {
             const answerId = falseAnswer?.id ?? virtualFalseId;
-            console.log('False button clicked', { 
-              falseAnswer, 
-              answerId,
-              questionId: question.id,
-              selectedAnswerId,
-              usingVirtual: !falseAnswer
-            });
             onAnswerSelect(answerId);
           }}
           className={`flex-1 p-6 text-lg font-semibold border-2 rounded-lg transition-all relative cursor-pointer ${
