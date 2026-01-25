@@ -725,7 +725,7 @@ const ExamScreen = () => {
   const handleTextInputBlur = async () => {
     if (!currentQuestion || !state?.attemptId) return;
     const answerText = textInputAnswers[currentQuestion.id];
-    if (!answerText) return;
+    if (!answerText || !answerText.trim()) return;
 
     try {
       const timeSpent = questionStartTime[currentQuestion.id]
@@ -734,26 +734,38 @@ const ExamScreen = () => {
           )
         : 0;
 
-      // For text/numeric input, we need to find or create the answer
-      // This is a simplified version - you may need to adjust based on your API
-      if (currentQuestion.answers && currentQuestion.answers.length > 0) {
-        const matchingAnswer = currentQuestion.answers.find(
-          (a) => a.answer_text.toLowerCase() === answerText.toLowerCase()
-        );
-        if (matchingAnswer) {
-          await submitAnswer(state.attemptId, {
-            question_id: currentQuestion.id,
-            answer_id: matchingAnswer.id,
-            time_spent: timeSpent,
-          });
-        }
-      }
+      // For text/numeric input, send answer_text directly to the API
+      await submitAnswer(state.attemptId, {
+        question_id: currentQuestion.id,
+        answer_text: answerText.trim(),
+        time_spent: timeSpent,
+      });
     } catch (error) {
       console.error("Error submitting text answer:", error);
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    // Submit text answer if exists before moving to next question
+    if (currentQuestion && 
+        (currentQuestion.question_type === 'text_input' || currentQuestion.question_type === 'numeric_input')) {
+      const answerText = textInputAnswers[currentQuestion.id];
+      if (answerText && answerText.trim() && state?.attemptId) {
+        try {
+          const timeSpent = questionStartTime[currentQuestion.id]
+            ? Math.floor((Date.now() - questionStartTime[currentQuestion.id]) / 1000)
+            : 0;
+          await submitAnswer(state.attemptId, {
+            question_id: currentQuestion.id,
+            answer_text: answerText.trim(),
+            time_spent: timeSpent,
+          });
+        } catch (error) {
+          console.error("Error submitting text answer on next:", error);
+        }
+      }
+    }
+
     if (currentQuestionIndex < totalQuestionsForSubject - 1) {
       setSubjectCurrentIndex({
         ...subjectCurrentIndex,

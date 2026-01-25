@@ -121,7 +121,8 @@ export const submitAnswer = async (
   attemptId: number,
   data: {
     question_id: number;
-    answer_id: number;
+    answer_id?: number;
+    answer_text?: string;
     time_spent?: number;
   }
 ) => {

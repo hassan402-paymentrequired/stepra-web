@@ -240,7 +240,7 @@ const ExamResults = () => {
 
         {/* Action Buttons - Fixed at bottom */}
         <div className="border-t bg-card p-4 sticky bottom-0 z-10">
-          <div className="max-w-4xl mx-auto space-y-3 gap-2">
+          <div className="max-w-4xl flex flex-col mx-auto gap-3">
             <Button
               onClick={() =>
                 navigate("/exam/corrections", {
@@ -253,7 +253,7 @@ const ExamResults = () => {
               <BookOpen className="h-4 w-4 mr-2" />
               View Corrections
             </Button>
-            <Button onClick={() => navigate("/")} className="w-full">
+            <Button onClick={() => navigate("/")} className="w-full ">
               Back to Home
             </Button>
           </div>

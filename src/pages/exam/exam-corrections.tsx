@@ -18,18 +18,20 @@ interface QuestionResult {
   question: {
     id: number;
     question_text: string;
+    question_type?: 'multiple_choice' | 'true_false' | 'text_input' | 'numeric_input';
     explanation: string | null;
-    points: number;
+    expected_answer?: string | null;
+    points?: number;
   };
   user_answer: {
-    id: number;
+    id: number | null;
     answer_text: string;
-    order: string;
+    order: string | null;
   } | null;
   correct_answer: {
-    id: number;
+    id: number | null;
     answer_text: string;
-    order: string;
+    order: string | null;
   } | null;
   is_correct: boolean;
   time_spent: number | null;
@@ -131,37 +133,54 @@ const ExamCorrections = () => {
           subjectNames.push("All Questions");
         }
 
-        // Note: The API should include all answers in question.answers
-        // For now, we'll collect answers from user_answer and correct_answer
-        // TODO: Update API to include all answers in the response
+        // Process results and build questions map
         allResults.forEach((result: QuestionResult) => {
           const questionId = result.question.id;
+          const questionType = result.question.question_type || 'multiple_choice';
+          
           if (!questionsMap[questionId]) {
-            const answerMap = new Map<string, { id: number; answer_text: string; order: string }>();
+            let answers: { id: number; answer_text: string; order: string }[] = [];
 
-            // Add correct answer
-            if (result.correct_answer) {
-              answerMap.set(result.correct_answer.order, result.correct_answer);
+            // For multiple_choice and true_false, collect all answers
+            if (questionType === 'multiple_choice' || questionType === 'true_false') {
+              const answerMap = new Map<string, { id: number; answer_text: string; order: string }>();
+
+              // Add correct answer
+              if (result.correct_answer && result.correct_answer.order) {
+                answerMap.set(result.correct_answer.order, {
+                  id: result.correct_answer.id || 0,
+                  answer_text: result.correct_answer.answer_text,
+                  order: result.correct_answer.order,
+                });
+              }
+
+              // Add user answer if different
+              if (result.user_answer && result.user_answer.order && 
+                  result.user_answer.id !== result.correct_answer?.id) {
+                answerMap.set(result.user_answer.order, {
+                  id: result.user_answer.id || 0,
+                  answer_text: result.user_answer.answer_text,
+                  order: result.user_answer.order,
+                });
+              }
+
+              // Sort answers by order (A, B, C, D, E)
+              answers = Array.from(answerMap.values()).sort((a, b) => 
+                (a.order || '').localeCompare(b.order || '')
+              );
             }
-
-            // Add user answer if different
-            if (result.user_answer && result.user_answer.id !== result.correct_answer?.id) {
-              answerMap.set(result.user_answer.order, result.user_answer);
-            }
-
-            // Sort answers by order (A, B, C, D, E)
-            const sortedAnswers = Array.from(answerMap.values()).sort((a, b) => 
-              a.order.localeCompare(b.order)
-            );
+            // For text_input and numeric_input, we don't need answer options
+            // The user_answer and correct_answer will be displayed directly
 
             questionsMap[questionId] = {
               id: questionId,
               question_text: result.question.question_text,
-              question_type: "multiple_choice" as const,
-              points: result.question.points,
+              question_type: questionType,
+              points: result.question.points || 0,
               order: 0,
-              answers: sortedAnswers,
+              answers: answers,
               explanation: result.question.explanation,
+              expected_answer: result.question.expected_answer,
             };
           }
         });
@@ -336,45 +355,100 @@ const ExamCorrections = () => {
             </p>
           </div>
 
-          {/* Answers - Same layout as exam screen */}
-          {currentQuestion && currentQuestion.answers && (
-            <div className="space-y-4">
-              {currentQuestion.answers.map((answer) => {
-                const isCorrect = correctAnswerId === answer.id;
-                const isUserAnswer = userAnswerId === answer.id;
-                const isSelected = isCorrect; // Show correct answer as selected
-
-                return (
-                  <label
-                    key={answer.id}
-                    className={`w-full p-4 text-left flex items-center gap-3 transition-all border-b cursor-default ${
-                      isSelected
-                        ? "text-primary font-medium"
-                        : isUserAnswer && !isCorrect
-                        ? "text-red-600"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`question-${currentResult.question.id}`}
-                      checked={isSelected}
-                      disabled
-                      className="w-5 h-5 text-primary border-gray-300 focus:ring-primary"
-                    />
-                    <span className="font-semibold min-w-[2rem]">
-                      {answer.order}.
-                    </span>
-                    <span className="flex-1">{answer.answer_text}</span>
-                    {isUserAnswer && !isCorrect && (
-                      <span className="text-xs text-red-600 font-medium">
-                        (Your answer)
-                      </span>
+          {/* Answers - Different display based on question type */}
+          {currentQuestion && (
+            <>
+              {currentQuestion.question_type === 'text_input' || currentQuestion.question_type === 'numeric_input' ? (
+                // Text/Numeric Input Display
+                <div className="space-y-4">
+                  <div className={`p-4 rounded-lg border-2 ${
+                    currentResult.is_correct 
+                      ? 'border-green-500 bg-green-50' 
+                      : 'border-red-500 bg-red-50'
+                  }`}>
+                    <div className="mb-3">
+                      <span className="text-sm font-semibold text-muted-foreground">Your Answer:</span>
+                      <p className={`mt-1 text-lg ${
+                        currentResult.is_correct ? 'text-green-700' : 'text-red-700'
+                      }`}>
+                        {currentResult.user_answer?.answer_text || 'No answer provided'}
+                      </p>
+                    </div>
+                    {!currentResult.is_correct && (
+                      <div>
+                        <span className="text-sm font-semibold text-muted-foreground">Correct Answer:</span>
+                        <p className="mt-1 text-lg text-green-700">
+                          {currentResult.correct_answer?.answer_text || currentQuestion.expected_answer || 'N/A'}
+                        </p>
+                      </div>
                     )}
-                  </label>
-                );
-              })}
-            </div>
+                  </div>
+                </div>
+              ) : currentQuestion.answers && currentQuestion.answers.length > 0 ? (
+                // Multiple Choice / True/False Display
+                <div className="space-y-4">
+                  {currentQuestion.answers.map((answer) => {
+                    const isCorrect = correctAnswerId === answer.id;
+                    const isUserAnswer = userAnswerId === answer.id;
+                    const isSelected = isCorrect; // Show correct answer as selected
+
+                    return (
+                      <label
+                        key={answer.id}
+                        className={`w-full p-4 text-left flex items-center gap-3 transition-all border-b cursor-default ${
+                          isSelected
+                            ? "text-primary font-medium"
+                            : isUserAnswer && !isCorrect
+                            ? "text-red-600"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={`question-${currentResult.question.id}`}
+                          checked={isSelected}
+                          disabled
+                          className="w-5 h-5 text-primary border-gray-300 focus:ring-primary"
+                        />
+                        {answer.order && (
+                          <span className="font-semibold min-w-[2rem]">
+                            {answer.order}.
+                          </span>
+                        )}
+                        <span className="flex-1">{answer.answer_text}</span>
+                        {isUserAnswer && !isCorrect && (
+                          <span className="text-xs text-red-600 font-medium">
+                            (Your answer)
+                          </span>
+                        )}
+                        {isCorrect && (
+                          <span className="text-xs text-green-600 font-medium">
+                            ✓ Correct
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                // Fallback if no answers available
+                <div className="p-4 border rounded-lg">
+                  <p className="text-muted-foreground">No answer options available for this question type.</p>
+                  {currentResult.user_answer && (
+                    <p className="mt-2">
+                      <span className="font-semibold">Your Answer: </span>
+                      {currentResult.user_answer.answer_text}
+                    </p>
+                  )}
+                  {currentResult.correct_answer && (
+                    <p className="mt-2">
+                      <span className="font-semibold">Correct Answer: </span>
+                      {currentResult.correct_answer.answer_text}
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           {/* Explanation */}
