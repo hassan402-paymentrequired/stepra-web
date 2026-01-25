@@ -2,8 +2,6 @@ import { Clock, ChevronDown, Calculator } from "lucide-react";
 
 interface ExamHeaderProps {
   currentSubject: string;
-  currentQuestionIndex: number;
-  totalQuestionsForSubject: number;
   timeRemaining: number;
   onSubjectClick: () => void;
   onCalculatorClick: () => void;
@@ -11,8 +9,6 @@ interface ExamHeaderProps {
 
 export const ExamHeader = ({
   currentSubject,
-  currentQuestionIndex,
-  totalQuestionsForSubject,
   timeRemaining,
   onSubjectClick,
   onCalculatorClick,

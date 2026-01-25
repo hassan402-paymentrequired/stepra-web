@@ -624,7 +624,7 @@ const ExamScreen = () => {
           })),
           ...Object.entries(textInputAnswers)
             .filter(([_, answer]) => answer.trim())
-            .map(([qId, answer]) => ({
+            .map(([qId, _]) => ({
               question_id: parseInt(qId),
               answer_id: 0,
               time_spent: questionStartTime[parseInt(qId)] ? Math.floor((Date.now() - questionStartTime[parseInt(qId)]) / 1000) : 0
@@ -756,7 +756,7 @@ const ExamScreen = () => {
     setShowSubjectModal(false);
   };
 
-  const handleLeaveExam = async () => {
+  const _ = async () => {
     if (state?.isPractice) {
       // End practice questions immediately
       if (state?.attemptId) {
@@ -991,8 +991,6 @@ const ExamScreen = () => {
       {/* Header with Timer and Subject Selector */}
       <ExamHeader
         currentSubject={currentSubject}
-        currentQuestionIndex={currentQuestionIndex}
-        totalQuestionsForSubject={totalQuestionsForSubject}
         timeRemaining={timeRemaining}
         onSubjectClick={() => setShowSubjectModal(true)}
         onCalculatorClick={() => setShowCalculator(true)}
