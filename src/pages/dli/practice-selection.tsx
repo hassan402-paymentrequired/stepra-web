@@ -5,8 +5,7 @@ import { Button } from "@/components/ui";
 import {
   getSubjects,
   getPracticeQuestions,
-  getExams,
-  startExamAttempt,
+  startPracticeSession,
 } from "@/apis/exam";
 import { useUser } from "@/lib/auth";
 import { getSubscriptionStatus } from "@/apis/subscription";
@@ -151,20 +150,6 @@ const DLIPracticeSelection = () => {
         subject: selectedSubject,
       }));
 
-      // Get an exam for the attempt
-      const examResponse = await getExams({
-        exam_type: "DLI",
-        subject: selectedSubject,
-      });
-
-      let firstExamId: number | null = null;
-      if (examResponse.success && examResponse.data.length > 0) {
-        firstExamId = examResponse.data[0].id;
-      } else {
-        alert("Unable to create exam attempt. Please contact support.");
-        return;
-      }
-
       // Prepare subjects data
       const subjectsData = [
         {
@@ -173,14 +158,15 @@ const DLIPracticeSelection = () => {
         },
       ];
 
-      // Start exam attempt
-      const attemptResponse = await startExamAttempt(firstExamId, {
+      // Start practice session using dedicated API endpoint (no exam record needed)
+      const attemptResponse = await startPracticeSession({
+        exam_type: "DLI",
         subjects: subjectsData,
         duration_minutes: timeMinutes,
       });
 
       if (!attemptResponse.success) {
-        alert("Failed to start practice. Please try again.");
+        alert(attemptResponse.message || "Failed to start practice. Please try again.");
         return;
       }
 
@@ -188,12 +174,12 @@ const DLIPracticeSelection = () => {
       navigate("/exam/screen", {
         state: {
           attemptId: attemptResponse.data.attempt.id,
-          examId: firstExamId,
+          examId: attemptResponse.data.attempt.exam_id,
           subjectsQuestions: {
             [selectedSubject]: questionsWithSubject,
           },
           exam: {
-            id: firstExamId,
+            id: attemptResponse.data.attempt.exam_id,
             title: `DLI ${selectedSubject} Practice Questions`,
             duration: timeMinutes,
             total_questions: questionsWithSubject.length,
