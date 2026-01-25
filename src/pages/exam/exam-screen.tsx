@@ -756,37 +756,6 @@ const ExamScreen = () => {
     setShowSubjectModal(false);
   };
 
-  const _ = async () => {
-    if (state?.isPractice) {
-      // End practice questions immediately
-      if (state?.attemptId) {
-        try {
-          setLoading(true);
-          await completeExamAttempt(state.attemptId, {
-            subjects: state.subjects?.map((subject) => ({
-              subject,
-              question_count: subjectsQuestions[subject]?.length || 0,
-            })),
-            duration_minutes: state.timeMinutes,
-          });
-          navigate("/");
-        } catch (error) {
-          console.error("Error ending practice:", error);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        navigate("/");
-      }
-    } else {
-      const confirmed = window.confirm(
-        "Are you sure you want to leave? Your progress will be saved."
-      );
-      if (confirmed) {
-        navigate("/");
-      }
-    }
-  };
 
   const handleCompleteExam = useCallback(
     async (autoSubmit = false) => {
