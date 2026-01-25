@@ -27,13 +27,7 @@ const Home = () => {
       });
 
       if (response.success && response.data?.leaderboard) {
-        // Remove duplicates by user ID and take top 10 unique users
-        const uniqueUsers = response.data.leaderboard
-          .filter((performer, index, self) => 
-            index === self.findIndex(p => p.user.id === performer.user.id)
-          )
-          .slice(0, 10);
-        setTopPerformers(uniqueUsers);
+        setTopPerformers(response.data.leaderboard);
       }
     } catch (error) {
       // Silently fail - leaderboard is not critical

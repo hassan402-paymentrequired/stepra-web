@@ -38,7 +38,7 @@ const getCurrentWeekDays = () => {
 
 const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
   const {
-    token: { colorBgContainer, borderRadiusLG, colorBorder },
+    token: { colorBgContainer, borderRadiusLG, colorBorder, colorText, colorTextSecondary },
   } = theme.useToken();
 
   const { data: user } = useUser();
@@ -213,6 +213,9 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          background: colorBgContainer,
+          borderBottom: `1px solid ${colorBorder}`,
+          padding: "0 24px",
         }}
       >
         <div
@@ -229,13 +232,14 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
-                color: "white",
+                color: colorText,
                 padding: "4px 12px",
                 borderRadius: "6px",
-                background: "rgba(255, 255, 255, 0.1)",
+                background: colorBgContainer,
+                border: `1px solid ${colorBorder}`,
               }}
             >
-              <Coins size={18} className="text-yellow-400" />
+              <Coins size={18} className="text-yellow-500" />
               <span style={{ fontSize: "14px", fontWeight: 600 }}>
                 ₦{creditBalance.toLocaleString()}
               </span>
@@ -252,7 +256,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
                   display: "flex",
                   alignItems: "center",
                   gap: "8px",
-                  color: "white",
+                  color: colorText,
                   background: "transparent",
                   border: "none",
                   cursor: "pointer",
@@ -260,8 +264,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
                   borderRadius: "4px",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(255, 255, 255, 0.1)";
+                  e.currentTarget.style.backgroundColor = colorBgContainer;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = "transparent";
