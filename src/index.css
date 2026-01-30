@@ -121,6 +121,10 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Ensure primary buttons always have visible text (overrides e.g. antd reset) */
+  [data-slot="button"][data-variant="default"] {
+    color: var(--primary-foreground);
+  }
 }
 
 @layer utilities {

@@ -1073,10 +1073,10 @@ const ExamScreen = () => {
                   onClick={() => goToQuestion(index)}
                   className={`w-10 h-10 rounded border-2 flex items-center justify-center text-sm font-medium ${
                     isCurrent
-                      ? "bg-primary border-primary text-white"
+                      ? "bg-primary border-primary !text-primary-foreground"
                       : isAnswered
-                      ? "bg-primary/20 border-primary text-primary"
-                      : "border-muted-foreground text-muted-foreground"
+                      ? "bg-primary/20 border-primary !text-primary"
+                      : "border-muted-foreground !text-muted-foreground"
                   }`}
                 >
                   {index + 1}

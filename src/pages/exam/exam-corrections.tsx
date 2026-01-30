@@ -22,6 +22,8 @@ interface QuestionResult {
     explanation: string | null;
     expected_answer?: string | null;
     points?: number;
+    /** All answer options (from API) for multiple_choice / true_false */
+    answers?: { id: number; answer_text: string; order: string; is_correct: boolean }[];
   };
   user_answer: {
     id: number | null;
@@ -141,36 +143,40 @@ const ExamCorrections = () => {
           if (!questionsMap[questionId]) {
             let answers: { id: number; answer_text: string; order: string }[] = [];
 
-            // For multiple_choice and true_false, collect all answers
+            // For multiple_choice and true_false, use all options from API when available
             if (questionType === 'multiple_choice' || questionType === 'true_false') {
-              const answerMap = new Map<string, { id: number; answer_text: string; order: string }>();
-
-              // Add correct answer
-              if (result.correct_answer && result.correct_answer.order) {
-                answerMap.set(result.correct_answer.order, {
-                  id: result.correct_answer.id || 0,
-                  answer_text: result.correct_answer.answer_text,
-                  order: result.correct_answer.order,
-                });
+              const apiAnswers = result.question.answers;
+              if (apiAnswers && apiAnswers.length > 0) {
+                answers = apiAnswers
+                  .map((a) => ({
+                    id: a.id,
+                    answer_text: a.answer_text,
+                    order: a.order,
+                  }))
+                  .sort((a, b) => (a.order || '').localeCompare(b.order || ''));
+              } else {
+                // Fallback: only correct + user answer (e.g. old API)
+                const answerMap = new Map<string, { id: number; answer_text: string; order: string }>();
+                if (result.correct_answer && result.correct_answer.order) {
+                  answerMap.set(result.correct_answer.order, {
+                    id: result.correct_answer.id || 0,
+                    answer_text: result.correct_answer.answer_text,
+                    order: result.correct_answer.order,
+                  });
+                }
+                if (result.user_answer && result.user_answer.order &&
+                    result.user_answer.id !== result.correct_answer?.id) {
+                  answerMap.set(result.user_answer.order, {
+                    id: result.user_answer.id || 0,
+                    answer_text: result.user_answer.answer_text,
+                    order: result.user_answer.order,
+                  });
+                }
+                answers = Array.from(answerMap.values()).sort((a, b) =>
+                  (a.order || '').localeCompare(b.order || '')
+                );
               }
-
-              // Add user answer if different
-              if (result.user_answer && result.user_answer.order && 
-                  result.user_answer.id !== result.correct_answer?.id) {
-                answerMap.set(result.user_answer.order, {
-                  id: result.user_answer.id || 0,
-                  answer_text: result.user_answer.answer_text,
-                  order: result.user_answer.order,
-                });
-              }
-
-              // Sort answers by order (A, B, C, D, E)
-              answers = Array.from(answerMap.values()).sort((a, b) => 
-                (a.order || '').localeCompare(b.order || '')
-              );
             }
-            // For text_input and numeric_input, we don't need answer options
-            // The user_answer and correct_answer will be displayed directly
 
             questionsMap[questionId] = {
               id: questionId,
@@ -385,48 +391,44 @@ const ExamCorrections = () => {
                   </div>
                 </div>
               ) : currentQuestion.answers && currentQuestion.answers.length > 0 ? (
-                // Multiple Choice / True/False Display
-                <div className="space-y-4">
+                // Multiple Choice / True/False: show all options with Your answer & Correct labels
+                <div className="space-y-3">
                   {currentQuestion.answers.map((answer) => {
                     const isCorrect = correctAnswerId === answer.id;
                     const isUserAnswer = userAnswerId === answer.id;
-                    const isSelected = isCorrect; // Show correct answer as selected
 
                     return (
-                      <label
+                      <div
                         key={answer.id}
-                        className={`w-full p-4 text-left flex items-center gap-3 transition-all border-b cursor-default ${
-                          isSelected
-                            ? "text-primary font-medium"
-                            : isUserAnswer && !isCorrect
-                            ? "text-red-600"
-                            : "text-muted-foreground"
+                        className={`w-full p-4 rounded-lg border-2 flex items-center gap-3 transition-all ${
+                          isCorrect && isUserAnswer
+                            ? "border-green-500 bg-green-50 dark:bg-green-950/30"
+                            : isCorrect
+                            ? "border-green-500 bg-green-50 dark:bg-green-950/30"
+                            : isUserAnswer
+                            ? "border-red-500 bg-red-50 dark:bg-red-950/30"
+                            : "border-border bg-muted/30"
                         }`}
                       >
-                        <input
-                          type="radio"
-                          name={`question-${currentResult.question.id}`}
-                          checked={isSelected}
-                          disabled
-                          className="w-5 h-5 text-primary border-gray-300 focus:ring-primary"
-                        />
                         {answer.order && (
-                          <span className="font-semibold min-w-[2rem]">
+                          <span className="font-semibold min-w-[2rem] text-muted-foreground">
                             {answer.order}.
                           </span>
                         )}
                         <span className="flex-1">{answer.answer_text}</span>
-                        {isUserAnswer && !isCorrect && (
-                          <span className="text-xs text-red-600 font-medium">
-                            (Your answer)
-                          </span>
-                        )}
-                        {isCorrect && (
-                          <span className="text-xs text-green-600 font-medium">
-                            ✓ Correct
-                          </span>
-                        )}
-                      </label>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {isUserAnswer && (
+                            <span className="text-xs font-medium px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">
+                              Your answer
+                            </span>
+                          )}
+                          {isCorrect && (
+                            <span className="text-xs font-medium px-2 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">
+                              ✓ Correct
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>

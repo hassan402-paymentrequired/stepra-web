@@ -186,7 +186,7 @@ const DLIPracticeSelection = () => {
           },
           timeMinutes: timeMinutes,
           subjects: [selectedSubject],
-          isPractice: true, // Mark as practice questions
+          isPractice: true, 
         },
       });
     } catch (error) {
