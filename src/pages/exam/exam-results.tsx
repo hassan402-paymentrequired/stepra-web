@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
+import { Modal } from "antd";
 import AppLayout from "@/components/layouts/app-layout";
 import { Button } from "@/components/ui";
 import { getExamResults } from "@/apis/exam";
+import { getSubscriptionStatus } from "@/apis/subscription";
 import { getApiErrorMessage } from "@/utils";
-import { CheckCircle2, XCircle, BookOpen } from "lucide-react";
+import { CheckCircle2, XCircle, BookOpen, CreditCard } from "lucide-react";
 import type { AxiosError } from "axios";
 
 interface QuestionResult {
@@ -50,7 +52,8 @@ interface SubjectAnalytics {
 const ExamResults = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const attemptId = (location.state as { attemptId: number })?.attemptId;
+  const routeState = location.state as { attemptId?: number } | undefined;
+  const attemptId = routeState?.attemptId;
 
   const [loading, setLoading] = useState(true);
   const [attempt, setAttempt] = useState<AttemptData | null>(null);
@@ -58,12 +61,27 @@ const ExamResults = () => {
   const [subjectAnalytics, setSubjectAnalytics] = useState<SubjectAnalytics[]>(
     []
   );
+  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
 
   useEffect(() => {
     if (attemptId) {
       loadResults();
     }
   }, [attemptId]);
+
+  useEffect(() => {
+    getSubscriptionStatus()
+      .then((res) => res.success && res.data && setHasActiveSubscription(res.data.has_active_subscription))
+      .catch(() => setHasActiveSubscription(false));
+  }, []);
+
+  // Show subscribe modal after any exam (JAMB past, JAMB practice, DLI) when user is not subscribed
+  useEffect(() => {
+    if (attempt && results.length > 0 && hasActiveSubscription === false) {
+      setShowSubscribeModal(true);
+    }
+  }, [attempt, results.length, hasActiveSubscription]);
 
   const loadResults = async () => {
     if (!attemptId) return;
@@ -259,6 +277,36 @@ const ExamResults = () => {
           </div>
         </div>
       </div>
+
+      {/* Subscribe to unlock unlimited practice — shown to non-subscribed users after practice */}
+      <Modal
+        open={showSubscribeModal}
+        onCancel={() => setShowSubscribeModal(false)}
+        footer={null}
+        closable={true}
+        width={400}
+        centered
+      >
+        <div className="text-center py-2">
+          <div className="flex justify-center mb-4">
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+              <CreditCard className="h-7 w-7 text-primary" />
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Enjoy unlimited practice</h3>
+          <p className="text-muted-foreground text-sm mb-6">
+            Subscribe to unlock more questions per session and practice without limits.
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button onClick={() => { setShowSubscribeModal(false); navigate("/subscription"); }} className="w-full">
+              Subscribe now
+            </Button>
+            <Button variant="outline" onClick={() => setShowSubscribeModal(false)} className="w-full">
+              Maybe later
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </AppLayout>
   );
 };

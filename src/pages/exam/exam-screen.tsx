@@ -537,7 +537,7 @@ const ExamScreen = () => {
       await completeExamAttempt(state.attemptId);
       
       toast.success(`Practice session ${reason === 'user_exit' ? 'auto-submitted' : 'completed'} successfully!`);
-      navigate('/exam/results', { state: { attemptId: state.attemptId, autoSubmitted: reason === 'user_exit' } });
+      navigate('/exam/results', { state: { attemptId: state.attemptId, autoSubmitted: reason === 'user_exit', isPracticeSession: state?.isPractice === true } });
 
     } catch (error) {
       console.error('Auto-submit error:', error);
@@ -831,7 +831,7 @@ const ExamScreen = () => {
         });
 
         // Navigate to results page
-        navigate("/exam/results", { state: { attemptId: state.attemptId } });
+        navigate("/exam/results", { state: { attemptId: state.attemptId, isPracticeSession: state?.isPractice === true } });
       } catch (error) {
         const errorMessage = getApiErrorMessage(error as AxiosError);
         alert(`Error: ${errorMessage}`);
@@ -1078,7 +1078,7 @@ const ExamScreen = () => {
                       ? "bg-primary/20 border-primary !text-primary"
                       : "border-muted-foreground !text-muted-foreground"
                   }`}
-                > laramic"stepra.2
+                > 
                   {index + 1}
                 </button>
               );

@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
-import { useNavigate,  Link } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useVerifyOtp, useResendOtp } from '@/services/mutations/useAuth';
 import { Button, Input } from '@/components/ui';
-import { Mail, ArrowLeft } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils';
 import { useLogout, useUser } from '@/lib/auth';
 import { toast } from 'sonner';
