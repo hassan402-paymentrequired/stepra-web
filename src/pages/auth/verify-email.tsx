@@ -5,7 +5,7 @@ import { useVerifyOtp, useResendOtp } from '@/services/mutations/useAuth';
 import { Button, Input } from '@/components/ui';
 import { Mail, ArrowLeft } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils';
-import { useUser } from '@/lib/auth';
+import { useLogout, useUser } from '@/lib/auth';
 import { toast } from 'sonner';
 
 const VerifyEmail = () => {
@@ -13,6 +13,7 @@ const VerifyEmail = () => {
   const navigate = useNavigate();
   const verifyOtp = useVerifyOtp();
   const resendOtp = useResendOtp();
+  const logout = useLogout();
   const [otp, setOtp] = useState('');
   const [errors, setErrors] = useState<{ otp?: string }>({});
   const [countdown, setCountdown] = useState(0);
@@ -78,16 +79,14 @@ const VerifyEmail = () => {
     }
   };
 
+  const handleLogout = async () => {
+    await logout.mutateAsync(undefined);
+    navigate("/authenticate/login");
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        <Link
-          to="/authenticate/login"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to login
-        </Link>
 
         <div className="mb-8 text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
@@ -143,6 +142,9 @@ const VerifyEmail = () => {
               : 'Resend Code'}
           </Button>
         </div>
+        <p className="text-sm text-center mt-5 flex items-center justify-center gap-2">
+         This is wrong email? <Button variant="link" onClick={handleLogout}>Logout</Button>
+        </p>
       </div>
     </div>
   );

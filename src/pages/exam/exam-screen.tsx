@@ -1078,7 +1078,7 @@ const ExamScreen = () => {
                       ? "bg-primary/20 border-primary !text-primary"
                       : "border-muted-foreground !text-muted-foreground"
                   }`}
-                >
+                > laramic"stepra.2
                   {index + 1}
                 </button>
               );

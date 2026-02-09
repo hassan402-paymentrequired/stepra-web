@@ -241,7 +241,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
             >
               <Coins size={18} className="text-yellow-500" />
               <span style={{ fontSize: "14px", fontWeight: 600 }}>
-                ₦{creditBalance.toLocaleString()}
+                {creditBalance.toLocaleString()}
               </span>
             </div>
 
