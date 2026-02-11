@@ -14,6 +14,7 @@ export interface SubscriptionStatus {
   has_active_subscription: boolean;
   subscription_status: string;
   subscription_expires_at: string | null;
+  subscription_device_bound?: boolean;
   subscription: {
     id: number;
     plan: {
@@ -101,5 +102,15 @@ export const verifyPayment = async (
   data: VerifyPaymentRequest
 ): Promise<VerifyPaymentResponse> => {
   const response = await api.post('/subscriptions/verify-payment', data);
+  return response.data;
+};
+
+/** Bind current device (IP) to subscription. Call after successful payment. Backend uses request IP. */
+export const registerSubscriptionDevice = async (): Promise<{
+  success: boolean;
+  message?: string;
+  code?: string;
+}> => {
+  const response = await api.post('/subscriptions/register-device', {});
   return response.data;
 };

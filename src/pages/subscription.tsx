@@ -6,6 +6,7 @@ import {
   getSubscriptionStatus,
   initializePayment,
   verifyPayment,
+  registerSubscriptionDevice,
   type SubscriptionPlan,
   type SubscriptionStatus,
 } from "@/apis/subscription";
@@ -38,9 +39,14 @@ const Subscription = () => {
     const checkPayment = setInterval(async () => {
       if (paymentWindow.closed) {
         setPaymentWindow(null);
-        // Check if payment was successful by verifying with backend
         await fetchData();
         await refetchUser();
+        // Bind this device to the subscription so it only works on this device
+        try {
+          await registerSubscriptionDevice();
+        } catch {
+          // Ignore (e.g. 403 if already bound to another device)
+        }
         clearInterval(checkPayment);
       }
     }, 2000);
@@ -104,7 +110,6 @@ const Subscription = () => {
             }
 
             if (event.data?.type === "payment_success") {
-              // Verify payment with backend
               try {
                 const verifyResponse = await verifyPayment({
                   reference: event.data.reference,
@@ -113,6 +118,7 @@ const Subscription = () => {
                 if (verifyResponse.success) {
                   await fetchData();
                   await refetchUser();
+                  await registerSubscriptionDevice();
                   alert("Your subscription has been activated!");
                 }
               } catch (error) {
@@ -159,11 +165,29 @@ const Subscription = () => {
   }
 
   const hasActiveSubscription = status?.has_active_subscription || false;
+  const subscriptionOnOtherDevice =
+    status?.subscription_status === "active" &&
+    status?.subscription_device_bound &&
+    !hasActiveSubscription;
 
   return (
     <AppLayout>
       <div className="w-full">
         <div className="max-w-4xl mx-auto">
+          {/* Subscription tied to another device */}
+          {subscriptionOnOtherDevice && (
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-6 mb-6">
+              <h3 className="text-lg font-semibold text-amber-800 mb-2">
+                Subscription is on another device
+              </h3>
+              <p className="text-amber-700 text-sm">
+                Your subscription is valid only on the device you used when you
+                subscribed. To use it on this device, you would need to
+                subscribe again or use the same device.
+              </p>
+            </div>
+          )}
+
           {/* Current Status */}
           {hasActiveSubscription && status?.subscription && (
             <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6 mb-6">

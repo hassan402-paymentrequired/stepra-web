@@ -3,7 +3,6 @@ import axios from 'axios';
 import { isEmpty } from 'lodash';
 import { getSessionWithKey } from './cookies';
 import { removeWithRedirect } from './auth';
-
 const baseUrl = import.meta.env.VITE_BASE_URL;
 
 const instance = axios.create({
@@ -14,7 +13,7 @@ const instance = axios.create({
   },
 });
 
-// Request interceptor to add token dynamically
+// Request interceptor: add auth token
 instance.interceptors.request.use(
   (config) => {
     const token = getSessionWithKey('token');

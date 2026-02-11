@@ -122,7 +122,7 @@ const Home = () => {
             </div>
           </div>
 
-          {/* Practice DLI Card */}
+          {/* Practice Unilag Card */}
           <div
             onClick={() => navigate("/dli/practice")}
             className="group relative overflow-hidden rounded-lg bg-card border border-border p-4 cursor-pointer transition-all duration-300 hover:shadow-md hover:border-primary"
@@ -135,10 +135,10 @@ const Home = () => {
                 <ArrowRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <h2 className="text-lg font-bold text-foreground mb-1.5 group-hover:text-primary transition-colors">
-                Practice DLI
+                Practice Unilag
               </h2>
               <p className="text-muted-foreground text-xs leading-relaxed mb-3">
-                Enhance your skills with DLI practice questions
+                Enhance your skills with Unilag practice questions
               </p>
               <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
                 <span>Start practicing</span>
