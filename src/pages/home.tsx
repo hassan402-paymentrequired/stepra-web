@@ -124,7 +124,7 @@ const Home = () => {
 
           {/* Practice Unilag Card */}
           <div
-            onClick={() => navigate("/dli/practice")}
+            onClick={() => navigate("/unilag/departments")}
             className="group relative overflow-hidden rounded-lg bg-card border border-border p-4 cursor-pointer transition-all duration-300 hover:shadow-md hover:border-primary"
           >
             <div className="relative z-10">

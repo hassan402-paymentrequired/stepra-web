@@ -10,6 +10,8 @@ import {
   JAMBPastQuestionsSelection,
   JAMBPracticeQuestionsSelection,
   DLIPracticeSelection,
+  UnilagDepartments,
+  UnilagDepartmentSubjects,
   ExamScreen,
   ExamResults,
   ExamCorrections,
@@ -72,6 +74,14 @@ const routesObject: RouteObject[] = [
       {
         path: 'dli/practice',
         element: <DLIPracticeSelection />,
+      },
+      {
+        path: 'unilag/departments',
+        element: <UnilagDepartments />,
+      },
+      {
+        path: 'unilag/departments/:departmentId/subjects',
+        element: <UnilagDepartmentSubjects />,
       },
       {
         path: 'exam/screen',

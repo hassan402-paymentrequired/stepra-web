@@ -97,6 +97,37 @@ export const getPracticeQuestions = async (
   return response.data;
 };
 
+export interface Department {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string;
+}
+
+export interface DepartmentSubjectsResponse {
+  success: boolean;
+  data: Array<{
+    id: number;
+    name: string;
+    slug: string;
+  }>;
+}
+
+export const getDepartments = async (): Promise<{ success: boolean; data: Department[] }> => {
+  const response = await api.get('/departments');
+  return response.data;
+};
+
+export const getDepartmentSubjects = async (
+  departmentId: number,
+  examType: 'DLI' | 'UNILAG'
+): Promise<DepartmentSubjectsResponse> => {
+  const response = await api.get(`/departments/${departmentId}/subjects`, {
+    params: { exam_type: examType },
+  });
+  return response.data;
+};
+
 export const startExamAttempt = async (
   examId: number,
   data: {

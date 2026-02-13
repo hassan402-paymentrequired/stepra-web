@@ -277,6 +277,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
           </div>
         )}
       </Header>
+      
       <Content
         className="px-4 sm:px-8 lg:px-12 xl:px-16"
         style={{
@@ -428,14 +429,14 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
             background: colorBgContainer,
             padding: "32px",
             borderRadius: borderRadiusLG,
-            minHeight: 0,
+            minHeight: "calc(100vh - 15rem)",
           }}
         >
           {children}
         </div>
       </Content>
       <Footer style={{ textAlign: "center" }}>
-        Learning Platform ©{new Date().getFullYear()} All rights reserved.
+        Stepra ©{new Date().getFullYear()} All rights reserved.
       </Footer>
     </Layout>
   );

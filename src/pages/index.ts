@@ -10,6 +10,8 @@ export const JAMBModeSelection = lazy(() => import('./jamb/mode-selection'));
 export const JAMBPastQuestionsSelection = lazy(() => import('./jamb/past-questions-selection'));
 export const JAMBPracticeQuestionsSelection = lazy(() => import('./jamb/practice-questions-selection'));
 export const DLIPracticeSelection = lazy(() => import('./dli/practice-selection'));
+export const UnilagDepartments = lazy(() => import('./unilag/departments'));
+export const UnilagDepartmentSubjects = lazy(() => import('./unilag/department-subjects'));
 export const ExamScreen = lazy(() => import('./exam/exam-screen'));
 export const ExamResults = lazy(() => import('./exam/exam-results'));
 export const ExamCorrections = lazy(() => import('./exam/exam-corrections'));
