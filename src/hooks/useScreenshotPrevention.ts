@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { logViolationWithContext } from '@/apis/security';
+import { logViolationWithContext, type SecurityViolation } from '@/apis/security';
 
 interface KeyCombination {
   ctrl?: boolean;
@@ -20,6 +20,12 @@ interface UseScreenshotPreventionOptions {
   logToBackend?: boolean;
 }
 
+interface PendingViolation {
+  type: SecurityViolation['type'];
+  details: Record<string, any>;
+  timestamp: number;
+}
+
 export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions = {}) => {
   const {
     enabled = true,
@@ -34,6 +40,64 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
   const [isBlurred, setIsBlurred] = useState(false);
   const suspiciousActivityCount = useRef(0);
   const watermarkRef = useRef<HTMLDivElement | null>(null);
+  const violationQueueRef = useRef<PendingViolation[]>([]);
+  const lastViolationSendRef = useRef<number>(Date.now());
+  const violationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Function to queue violations instead of sending immediately
+  const queueViolation = (type: SecurityViolation['type'], details: Record<string, any>) => {
+    if (!logToBackend) return;
+    
+    violationQueueRef.current.push({
+      type,
+      details,
+      timestamp: Date.now(),
+    });
+  };
+
+  // Function to send queued violations to backend
+  const sendQueuedViolations = async () => {
+    if (violationQueueRef.current.length === 0) return;
+    
+    const violationsToSend = [...violationQueueRef.current];
+    violationQueueRef.current = []; // Clear queue
+    
+    // Send each violation (they're already queued, so we can send them)
+    for (const violation of violationsToSend) {
+      try {
+        await logViolationWithContext(violation.type, violation.details, attemptId);
+      } catch (error) {
+        console.error('Failed to log security violation:', error);
+        // Re-queue failed violations (optional - you might want to drop them)
+        // violationQueueRef.current.push(violation);
+      }
+    }
+    
+    lastViolationSendRef.current = Date.now();
+  };
+
+  // Set up interval to send violations every 5 minutes
+  useEffect(() => {
+    if (!enabled || !logToBackend) return;
+
+    // Set up interval to send violations every 5 minutes (300000 ms)
+    violationIntervalRef.current = setInterval(() => {
+      sendQueuedViolations();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    // Send violations on component unmount or when disabled
+    return () => {
+      if (violationIntervalRef.current) {
+        clearInterval(violationIntervalRef.current);
+        violationIntervalRef.current = null;
+      }
+      // Send any remaining violations before cleanup
+      if (violationQueueRef.current.length > 0) {
+        sendQueuedViolations();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, logToBackend, attemptId]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -204,15 +268,15 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
         e.stopPropagation();
         suspiciousActivityCount.current++;
         
-        // Log to backend if enabled
+        // Queue violation instead of sending immediately
         if (logToBackend) {
           const keyCombo = `${e.ctrlKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.metaKey ? 'Cmd+' : ''}${e.altKey ? 'Option+' : ''}${e.key}`;
-          logViolationWithContext('keyboard_shortcut', {
+          queueViolation('keyboard_shortcut', {
             key_combination: keyCombo,
             violation_count: suspiciousActivityCount.current,
             platform: navigator.platform,
             is_mac: /Mac|iPhone|iPad|iPod/.test(navigator.platform),
-          }, attemptId);
+          });
         }
         
         onScreenshotAttempt?.();
@@ -242,12 +306,12 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
       e.preventDefault();
       suspiciousActivityCount.current++;
       
-      // Log to backend
+      // Queue violation instead of sending immediately
       if (logToBackend) {
-        logViolationWithContext('context_menu', {
+        queueViolation('context_menu', {
           mouse_position: { x: e.clientX, y: e.clientY },
           target_element: e.target ? (e.target as Element).tagName : 'unknown',
-        }, attemptId);
+        });
       }
       
       onSuspiciousActivity?.('context_menu');
@@ -261,12 +325,12 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
         setIsBlurred(true);
         document.body.classList.add('suspicious-activity');
         
-        // Log to backend
+        // Queue violation instead of sending immediately
         if (logToBackend) {
-          logViolationWithContext('window_hidden', {
+          queueViolation('window_hidden', {
             document_visibility_state: document.visibilityState,
             page_focus: document.hasFocus(),
-          }, attemptId);
+          });
         }
         
         onSuspiciousActivity?.('window_hidden');
@@ -286,11 +350,11 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
       setIsBlurred(true);
       document.body.classList.add('suspicious-activity');
       
-      // Log to backend
+      // Queue violation instead of sending immediately
       if (logToBackend) {
-        logViolationWithContext('window_blur', {
+        queueViolation('window_blur', {
           active_element: document.activeElement?.tagName || 'unknown',
-        }, attemptId);
+        });
       }
       
       onSuspiciousActivity?.('window_blur');
@@ -315,10 +379,10 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
           if (screenDevices.length > 0) {
             onSuspiciousActivity?.('potential_screen_recording');
             if (logToBackend) {
-              logViolationWithContext('potential_screen_recording', {
+              queueViolation('potential_screen_recording', {
                 screen_devices_detected: screenDevices.length,
                 device_labels: screenDevices.map(d => d.label),
-              }, attemptId);
+              });
             }
           }
         }).catch(() => {
@@ -338,11 +402,11 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
           if (focusChangeCount > 3) {
             onSuspiciousActivity?.('rapid_focus_changes');
             if (logToBackend) {
-              logViolationWithContext('potential_screen_recording', {
+              queueViolation('potential_screen_recording', {
                 rapid_focus_changes: focusChangeCount,
                 platform: 'Mac',
                 possible_screenshot_app: true,
-              }, attemptId);
+              });
             }
             toast.warning('Rapid window switching detected. Screenshot app usage suspected.');
           }

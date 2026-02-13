@@ -167,6 +167,18 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
         items.push({ title: "Practice" });
       }
     }
+    // Handle Unilag routes
+    else if (pathname.startsWith("/unilag/")) {
+      items.push({ title: "Unilag" });
+      if (pathname === "/unilag/departments") {
+        items.push({ title: "Departments" });
+      } else if (pathname.startsWith("/unilag/departments/") && pathname.includes("/subjects")) {
+        // Extract department ID from path
+        const departmentMatch = pathname.match(/\/unilag\/departments\/(\d+)\/subjects/);
+        items.push({ title: "Departments", href: "/unilag/departments" });
+        items.push({ title: "Subjects" });
+      }
+    }
     // Handle Exam routes
     else if (pathname.startsWith("/exam/")) {
       items.push({ title: "Exam" });

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
+import { Modal } from 'antd';
 import AppLayout from '@/components/layouts/app-layout';
 import { Button } from '@/components/ui';
 import { getSubjects, getPracticeQuestions, startPracticeSession } from '@/apis/exam';
@@ -26,6 +27,19 @@ const JAMBPracticeQuestionsSelection = () => {
   const [currentSubjectForQuestionCount, setCurrentSubjectForQuestionCount] = useState<string | null>(null);
   const [startingExam, setStartingExam] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [showLimitedQuestionsModal, setShowLimitedQuestionsModal] = useState(false);
+  const [limitedQuestionsData, setLimitedQuestionsData] = useState<{
+    available: number;
+    requested: number;
+    subject: string;
+  } | null>(null);
+  const [pendingPracticeData, setPendingPracticeData] = useState<{
+    subjectsQuestions: Record<string, any[]>;
+    subjectsData: Array<{ subject: string; question_count: number }>;
+    timeMinutesNum: number;
+    selectedSubjects: string[];
+    totalQuestions: number;
+  } | null>(null);
   
   // Error state
   const [error, setError] = useState<string | null>(null);
@@ -145,6 +159,52 @@ const JAMBPracticeQuestionsSelection = () => {
     });
   }, [selectedSubjects]);
 
+  const proceedWithPracticeSession = useCallback(async (
+    subjectsQuestions: Record<string, any[]>,
+    subjectsData: Array<{ subject: string; question_count: number }>,
+    timeMinutesNum: number,
+    selectedSubjects: string[],
+    totalQuestions: number
+  ) => {
+    try {
+      // Start practice session using dedicated API endpoint
+      const attemptResponse = await startPracticeSession({
+        exam_type: 'JAMB',
+        subjects: subjectsData,
+        duration_minutes: timeMinutesNum,
+      });
+
+      if (!attemptResponse.success) {
+        throw new Error(attemptResponse.message || 'Failed to create practice session');
+      }
+
+      // Success - navigate to exam screen with real attempt ID
+      navigate('/exam/screen', {
+        state: {
+          attemptId: attemptResponse.data.attempt.id, // Real database ID
+          examId: attemptResponse.data.attempt.exam_id,
+          subjectsQuestions,
+          exam: {
+            id: attemptResponse.data.attempt.exam_id,
+            title: `JAMB ${selectedSubjects.join(', ')} Practice Questions`,
+            duration: timeMinutesNum,
+            total_questions: totalQuestions,
+          },
+          timeMinutes: timeMinutesNum,
+          subjects: selectedSubjects,
+          isPractice: true,
+        },
+      });
+
+      toast.success('Practice session started successfully!');
+    } catch (error) {
+      console.error('Error starting exam:', error);
+      const errorMessage = getApiErrorMessage(error as AxiosError);
+      toast.error(errorMessage || 'Failed to start practice. Please try again.');
+      setStartingExam(false);
+    }
+  }, [navigate]);
+
   const selectQuestionCount = useCallback((count: number) => {
     if (!currentSubjectForQuestionCount) return;
     
@@ -239,36 +299,8 @@ const JAMBPracticeQuestionsSelection = () => {
         return;
       }
 
-      // Start practice session using dedicated API endpoint
-      const attemptResponse = await startPracticeSession({
-        exam_type: 'JAMB',
-        subjects: subjectsData,
-        duration_minutes: timeMinutesNum,
-      });
-
-      if (!attemptResponse.success) {
-        throw new Error(attemptResponse.message || 'Failed to create practice session');
-      }
-
-      // Success - navigate to exam screen with real attempt ID
-      navigate('/exam/screen', {
-        state: {
-          attemptId: attemptResponse.data.attempt.id, // Real database ID
-          examId: attemptResponse.data.attempt.exam_id,
-          subjectsQuestions,
-          exam: {
-            id: attemptResponse.data.attempt.exam_id,
-            title: `JAMB ${selectedSubjects.join(', ')} Practice Questions`,
-            duration: timeMinutesNum,
-            total_questions: totalQuestions,
-          },
-          timeMinutes: timeMinutesNum,
-          subjects: selectedSubjects,
-          isPractice: true,
-        },
-      });
-
-      toast.success('Practice session started successfully!');
+      // This function is called after user confirms or if no limited questions
+      await proceedWithPracticeSession(subjectsQuestions, subjectsData, timeMinutesNum, selectedSubjects, totalQuestions);
       
     } catch (error) {
       console.error('Error starting exam:', error);
@@ -522,6 +554,81 @@ const JAMBPracticeQuestionsSelection = () => {
           </div>
         </div>
       )}
+
+      {/* Limited Questions Confirmation Modal */}
+      <Modal
+        open={showLimitedQuestionsModal}
+        onCancel={() => {
+          setShowLimitedQuestionsModal(false);
+          setLimitedQuestionsData(null);
+          setPendingPracticeData(null);
+          setStartingExam(false);
+        }}
+        footer={null}
+        closable={true}
+        width={400}
+        centered
+      >
+        <div className="text-center py-2">
+          <div className="flex justify-center mb-4">
+            <div className="w-14 h-14 rounded-full bg-yellow-100 flex items-center justify-center">
+              <AlertCircle className="h-7 w-7 text-yellow-600" />
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Limited Questions Available</h3>
+          <p className="text-muted-foreground text-sm mb-6">
+            Only {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''} available for {limitedQuestionsData?.subject} (requested {limitedQuestionsData?.requested}).
+            <br />
+            Would you like to proceed with {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''}?
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button 
+              onClick={async () => {
+                if (pendingPracticeData && limitedQuestionsData) {
+                  setShowLimitedQuestionsModal(false);
+                  // Update question count for the limited subject
+                  const updatedSubjectsData = pendingPracticeData.subjectsData.map(subj => 
+                    subj.subject === limitedQuestionsData.subject
+                      ? { ...subj, question_count: limitedQuestionsData.available }
+                      : subj
+                  );
+                  // Update subjectsQuestions to use only available questions
+                  const updatedSubjectsQuestions = { ...pendingPracticeData.subjectsQuestions };
+                  if (updatedSubjectsQuestions[limitedQuestionsData.subject]) {
+                    updatedSubjectsQuestions[limitedQuestionsData.subject] = 
+                      updatedSubjectsQuestions[limitedQuestionsData.subject].slice(0, limitedQuestionsData.available);
+                  }
+                  const updatedTotalQuestions = pendingPracticeData.totalQuestions - limitedQuestionsData.requested + limitedQuestionsData.available;
+                  await proceedWithPracticeSession(
+                    updatedSubjectsQuestions,
+                    updatedSubjectsData,
+                    pendingPracticeData.timeMinutesNum,
+                    pendingPracticeData.selectedSubjects,
+                    updatedTotalQuestions
+                  );
+                  setLimitedQuestionsData(null);
+                  setPendingPracticeData(null);
+                }
+              }} 
+              className="w-full"
+            >
+              Proceed with {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowLimitedQuestionsModal(false);
+                setLimitedQuestionsData(null);
+                setPendingPracticeData(null);
+                setStartingExam(false);
+              }} 
+              className="w-full"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </AppLayout>
   );
 };

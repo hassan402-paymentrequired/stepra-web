@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { Modal } from "antd";
 import AppLayout from "@/components/layouts/app-layout";
 import { Button } from "@/components/ui";
 import {
@@ -30,6 +31,12 @@ const DLIPracticeSelection = () => {
   const [showQuestionCountModal, setShowQuestionCountModal] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [showLimitedQuestionsModal, setShowLimitedQuestionsModal] = useState(false);
+  const [limitedQuestionsData, setLimitedQuestionsData] = useState<{
+    available: number;
+    requested: number;
+    subject: string;
+  } | null>(null);
 
   // Fetch subscription status from API for accurate check
   useEffect(() => {
@@ -60,6 +67,59 @@ const DLIPracticeSelection = () => {
     (_, i) => i + 1
   );
   const timeOptions = Array.from({ length: 120 }, (_, i) => i + 1);
+
+  const proceedWithPractice = async (
+    allQuestions: any[],
+    selectedSubject: string,
+    questionCount: number,
+    timeMinutes: number
+  ) => {
+    // Add subject identifier to questions
+    const questionsWithSubject = allQuestions.map((q: any) => ({
+      ...q,
+      subject: selectedSubject,
+    }));
+
+    // Prepare subjects data
+    const subjectsData = [
+      {
+        subject: selectedSubject,
+        question_count: Math.min(questionCount, allQuestions.length),
+      },
+    ];
+
+    // Start practice session using dedicated API endpoint (no exam record needed)
+    const attemptResponse = await startPracticeSession({
+      exam_type: "DLI",
+      subjects: subjectsData,
+      duration_minutes: timeMinutes,
+    });
+
+    if (!attemptResponse.success) {
+      alert(attemptResponse.message || "Failed to start practice. Please try again.");
+      return;
+    }
+
+    // Navigate to exam screen
+    navigate("/exam/screen", {
+      state: {
+        attemptId: attemptResponse.data.attempt.id,
+        examId: attemptResponse.data.attempt.exam_id,
+        subjectsQuestions: {
+          [selectedSubject]: questionsWithSubject,
+        },
+        exam: {
+          id: attemptResponse.data.attempt.exam_id,
+          title: `DLI ${selectedSubject} Practice Questions`,
+          duration: timeMinutes,
+          total_questions: questionsWithSubject.length,
+        },
+        timeMinutes: timeMinutes,
+        subjects: [selectedSubject],
+        isPractice: true,
+      },
+    });
+  };
 
   useEffect(() => {
     loadSubjects();
@@ -139,56 +199,18 @@ const DLIPracticeSelection = () => {
       }
 
       if (allQuestions.length < questionCount) {
-        alert(
-          `Only ${allQuestions.length} questions available for ${selectedSubject} (requested ${questionCount}).`
-        );
-      }
-
-      // Add subject identifier to questions
-      const questionsWithSubject = allQuestions.map((q: any) => ({
-        ...q,
-        subject: selectedSubject,
-      }));
-
-      // Prepare subjects data
-      const subjectsData = [
-        {
+        // Show modal asking user if they want to proceed
+        setLimitedQuestionsData({
+          available: allQuestions.length,
+          requested: questionCount,
           subject: selectedSubject,
-          question_count: questionCount,
-        },
-      ];
-
-      // Start practice session using dedicated API endpoint (no exam record needed)
-      const attemptResponse = await startPracticeSession({
-        exam_type: "DLI",
-        subjects: subjectsData,
-        duration_minutes: timeMinutes,
-      });
-
-      if (!attemptResponse.success) {
-        alert(attemptResponse.message || "Failed to start practice. Please try again.");
-        return;
+        });
+        setShowLimitedQuestionsModal(true);
+        return; // Wait for user decision
       }
 
-      // Navigate to exam screen
-      navigate("/exam/screen", {
-        state: {
-          attemptId: attemptResponse.data.attempt.id,
-          examId: attemptResponse.data.attempt.exam_id,
-          subjectsQuestions: {
-            [selectedSubject]: questionsWithSubject,
-          },
-          exam: {
-            id: attemptResponse.data.attempt.exam_id,
-            title: `DLI ${selectedSubject} Practice Questions`,
-            duration: timeMinutes,
-            total_questions: questionsWithSubject.length,
-          },
-          timeMinutes: timeMinutes,
-          subjects: [selectedSubject],
-          isPractice: true, 
-        },
-      });
+      // Proceed with practice session
+      await proceedWithPractice(allQuestions, selectedSubject, questionCount, timeMinutes);
     } catch (error) {
       const errorMessage = getApiErrorMessage(error as AxiosError);
       alert(`Error: ${errorMessage}`);
@@ -474,6 +496,78 @@ const DLIPracticeSelection = () => {
           </div>
         </div>
       )}
+
+      {/* Limited Questions Confirmation Modal */}
+      <Modal
+        open={showLimitedQuestionsModal}
+        onCancel={() => {
+          setShowLimitedQuestionsModal(false);
+          setLimitedQuestionsData(null);
+          setStartingExam(false);
+        }}
+        footer={null}
+        closable={true}
+        width={400}
+        centered
+      >
+        <div className="text-center py-2">
+          <div className="flex justify-center mb-4">
+            <div className="w-14 h-14 rounded-full bg-yellow-100 flex items-center justify-center">
+              <AlertCircle className="h-7 w-7 text-yellow-600" />
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Limited Questions Available</h3>
+          <p className="text-muted-foreground text-sm mb-6">
+            Only {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''} available for {limitedQuestionsData?.subject} (requested {limitedQuestionsData?.requested}).
+            <br />
+            Would you like to proceed with {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''}?
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button 
+              onClick={async () => {
+                if (limitedQuestionsData && selectedSubject && questionCount && timeMinutes) {
+                  setShowLimitedQuestionsModal(false);
+                  // Fetch questions again with the available count
+                  try {
+                    const questionsResponse = await getPracticeQuestions(
+                      "DLI",
+                      limitedQuestionsData.subject,
+                      limitedQuestionsData.available
+                    );
+                    if (questionsResponse.success && questionsResponse.data) {
+                      await proceedWithPractice(
+                        questionsResponse.data,
+                        limitedQuestionsData.subject,
+                        limitedQuestionsData.available,
+                        timeMinutes
+                      );
+                    }
+                  } catch (error) {
+                    const errorMessage = getApiErrorMessage(error as AxiosError);
+                    alert(`Error: ${errorMessage}`);
+                  }
+                  setLimitedQuestionsData(null);
+                  setStartingExam(false);
+                }
+              }} 
+              className="w-full"
+            >
+              Proceed with {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowLimitedQuestionsModal(false);
+                setLimitedQuestionsData(null);
+                setStartingExam(false);
+              }} 
+              className="w-full"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </AppLayout>
   );
 };

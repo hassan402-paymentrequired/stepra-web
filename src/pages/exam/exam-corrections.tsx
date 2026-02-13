@@ -22,6 +22,9 @@ interface QuestionResult {
     explanation: string | null;
     expected_answer?: string | null;
     points?: number;
+    image?: string | null;
+    image_url?: string;
+    image_path?: string;
     /** All answer options (from API) for multiple_choice / true_false */
     answers?: { id: number; answer_text: string; order: string; is_correct: boolean }[];
   };
@@ -187,6 +190,9 @@ const ExamCorrections = () => {
               answers: answers,
               explanation: result.question.explanation,
               expected_answer: result.question.expected_answer || '',
+              image: result.question.image || null,
+              image_url: result.question.image_url,
+              image_path: result.question.image_path,
             };
           }
         });
@@ -259,7 +265,11 @@ const ExamCorrections = () => {
 
   // Get base URL for images
   const baseUrl = import.meta.env.VITE_BASE_URL || "http://localhost:8000";
-  const imageUrl = currentQuestion?.image_url
+  const imageUrl = currentQuestion?.image
+    ? currentQuestion.image.startsWith("http")
+      ? currentQuestion.image
+      : `${baseUrl}/storage/${currentQuestion.image}`
+    : currentQuestion?.image_url
     ? currentQuestion.image_url.startsWith("http")
       ? currentQuestion.image_url
       : `${baseUrl}${currentQuestion.image_url}`

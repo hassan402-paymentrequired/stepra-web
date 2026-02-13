@@ -132,7 +132,7 @@ const ExamResults = () => {
     );
   }
 
-  if (!attempt || results.length === 0) {
+  if (!attempt) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-full">
@@ -145,8 +145,11 @@ const ExamResults = () => {
     );
   }
 
-  const correctCount = results.filter((r) => r.is_correct).length;
-  const incorrectCount = results.filter((r) => !r.is_correct).length;
+  // If no questions were answered, show attempt with 0 score
+  const hasNoAnswers = results.length === 0;
+
+  const correctCount = hasNoAnswers ? 0 : results.filter((r) => r.is_correct).length;
+  const incorrectCount = hasNoAnswers ? 0 : results.filter((r) => !r.is_correct).length;
 
   // Extract subject names
   const subjects: string[] = [];
@@ -170,52 +173,73 @@ const ExamResults = () => {
             {/* Score Card */}
             <div
               className={`rounded-lg p-8 mb-6 text-white ${getGradeBgColor(
-                attempt.percentage
+                attempt.percentage || 0
               )}`}
             >
               <div className="text-center">
-                <div className="text-6xl font-bold mb-2">
-                  {attempt.correct_answers}/{attempt.total_questions}
-                </div>
-                <div className="text-2xl font-semibold mb-2">
-                  {getGradeText(attempt.percentage)}
-                </div>
-                <div className="text-lg opacity-90">
-                  {attempt.correct_answers} correct out of{" "}
-                  {attempt.total_questions} questions
-                </div>
-                {attempt.score && (
-                  <div className="text-lg opacity-90 mt-2">
-                    Score: {attempt.score}{" "}
-                    {attempt.percentage &&
-                      `(${attempt.percentage.toFixed(1)}%)`}
-                  </div>
+                {hasNoAnswers ? (
+                  <>
+                    <div className="text-6xl font-bold mb-2">
+                      0/{attempt.total_questions}
+                    </div>
+                    <div className="text-2xl font-semibold mb-2">
+                      No Questions Answered
+                    </div>
+                    <div className="text-lg opacity-90">
+                      You submitted the exam without answering any questions
+                    </div>
+                    <div className="text-lg opacity-90 mt-2">
+                      Score: 0 (0%)
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-6xl font-bold mb-2">
+                      {attempt.correct_answers}/{attempt.total_questions}
+                    </div>
+                    <div className="text-2xl font-semibold mb-2">
+                      {getGradeText(attempt.percentage)}
+                    </div>
+                    <div className="text-lg opacity-90">
+                      {attempt.correct_answers} correct out of{" "}
+                      {attempt.total_questions} questions
+                    </div>
+                    {attempt.score && (
+                      <div className="text-lg opacity-90 mt-2">
+                        Score: {attempt.score}{" "}
+                        {attempt.percentage &&
+                          `(${attempt.percentage.toFixed(1)}%)`}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
 
             {/* Statistics Cards */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-card border rounded-lg p-6 text-center">
-                <div className="flex justify-center mb-2">
-                  <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                    <CheckCircle2 className="h-6 w-6 text-green-600" />
+            {!hasNoAnswers && (
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-card border rounded-lg p-6 text-center">
+                  <div className="flex justify-center mb-2">
+                    <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                      <CheckCircle2 className="h-6 w-6 text-green-600" />
+                    </div>
                   </div>
+                  <div className="text-2xl font-bold mb-1">{correctCount}</div>
+                  <div className="text-sm text-muted-foreground">Correct</div>
                 </div>
-                <div className="text-2xl font-bold mb-1">{correctCount}</div>
-                <div className="text-sm text-muted-foreground">Correct</div>
-              </div>
 
-              <div className="bg-card border rounded-lg p-6 text-center">
-                <div className="flex justify-center mb-2">
-                  <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                    <XCircle className="h-6 w-6 text-red-600" />
+                <div className="bg-card border rounded-lg p-6 text-center">
+                  <div className="flex justify-center mb-2">
+                    <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                      <XCircle className="h-6 w-6 text-red-600" />
+                    </div>
                   </div>
+                  <div className="text-2xl font-bold mb-1">{incorrectCount}</div>
+                  <div className="text-sm text-muted-foreground">Incorrect</div>
                 </div>
-                <div className="text-2xl font-bold mb-1">{incorrectCount}</div>
-                <div className="text-sm text-muted-foreground">Incorrect</div>
               </div>
-            </div>
+            )}
 
             {/* Subject Analytics */}
             {subjectAnalytics.length > 0 && (
@@ -253,27 +277,26 @@ const ExamResults = () => {
                 </div>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Action Buttons - Fixed at bottom */}
-        <div className="border-t bg-card p-4 sticky bottom-0 z-10">
-          <div className="max-w-4xl flex flex-col mx-auto gap-3">
-            <Button
-              onClick={() =>
-                navigate("/exam/corrections", {
-                  state: { attemptId, subjects },
-                })
-              }
-              variant="outline"
-              className="w-full"
-            >
-              <BookOpen className="h-4 w-4 mr-2" />
-              View Corrections
-            </Button>
+<div className=" flex flex-col mx-auto gap-3">
+            {!hasNoAnswers && (
+              <Button
+                onClick={() =>
+                  navigate("/exam/corrections", {
+                    state: { attemptId, subjects },
+                  })
+                }
+                variant="outline"
+                className="w-full"
+              >
+                <BookOpen className="h-4 w-4 mr-2" />
+                View Corrections
+              </Button>
+            )}
             <Button onClick={() => navigate("/")} className="w-full ">
               Back to Home
             </Button>
+          </div>
           </div>
         </div>
       </div>

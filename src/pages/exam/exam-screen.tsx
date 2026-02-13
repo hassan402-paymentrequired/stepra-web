@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router";
+import { Modal } from "antd";
 import { Button } from "@/components/ui";
 import { submitAnswer, completeExamAttempt } from "@/apis/exam";
 import { getApiErrorMessage } from "@/utils";
@@ -8,6 +9,7 @@ import type { Question } from "@/apis/exam";
 import { toast } from "sonner";
 import { useScreenshotPrevention } from "@/hooks/useScreenshotPrevention";
 import { useUser } from "@/lib/auth";
+import { AlertTriangle } from "lucide-react";
 import { ExamHeader } from "./components/ExamHeader";
 import { QuestionDisplay } from "./components/QuestionDisplay";
 import { AnswerOptions } from "./components/AnswerOptions";
@@ -371,6 +373,8 @@ const ExamScreen = () => {
   const [loading, setLoading] = useState(false);
   const [showSubjectModal, setShowSubjectModal] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [showConfirmSubmitModal, setShowConfirmSubmitModal] = useState(false);
+  const [unansweredSubjectsCount, setUnansweredSubjectsCount] = useState(0);
   const [questionStartTime, setQuestionStartTime] = useState<Record<number, number>>({});
 
   // Calculator state
@@ -789,6 +793,34 @@ const ExamScreen = () => {
   };
 
 
+  // Separate function to handle actual submission
+  const proceedWithSubmission = useCallback(async () => {
+    if (!state?.attemptId) return;
+
+    try {
+      setLoading(true);
+
+      // Complete the exam
+      await completeExamAttempt(state.attemptId, {
+        subjects: state.subjects?.map((subject) => ({
+          subject,
+          question_count: subjectsQuestions[subject]?.length || 0,
+        })),
+        duration_minutes: state.timeMinutes,
+      });
+
+      // Navigate to results page
+      navigate("/exam/results", { state: { attemptId: state.attemptId, isPracticeSession: state?.isPractice === true } });
+    } catch (error) {
+      const errorMessage = getApiErrorMessage(error as AxiosError);
+      console.error('Error completing exam:', errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+      setShowConfirmSubmitModal(false);
+    }
+  }, [state, subjectsQuestions, navigate]);
+
   const handleCompleteExam = useCallback(
     async (autoSubmit = false) => {
       if (!state?.attemptId) return;
@@ -810,36 +842,16 @@ const ExamScreen = () => {
       );
 
       if (!autoSubmit && unansweredSubjects.length > 0) {
-        const confirmed = window.confirm(
-          `You have unanswered questions in ${unansweredSubjects.length} ${
-            unansweredSubjects.length === 1 ? "subject" : "subjects"
-          }. Are you sure you want to submit?`
-        );
-        if (!confirmed) return;
+        // Show confirmation modal instead of browser alert
+        setUnansweredSubjectsCount(unansweredSubjects.length);
+        setShowConfirmSubmitModal(true);
+        return;
       }
 
-      try {
-        setLoading(true);
-
-        // Complete the exam
-        await completeExamAttempt(state.attemptId, {
-          subjects: state.subjects?.map((subject) => ({
-            subject,
-            question_count: subjectsQuestions[subject]?.length || 0,
-          })),
-          duration_minutes: state.timeMinutes,
-        });
-
-        // Navigate to results page
-        navigate("/exam/results", { state: { attemptId: state.attemptId, isPracticeSession: state?.isPractice === true } });
-      } catch (error) {
-        const errorMessage = getApiErrorMessage(error as AxiosError);
-        alert(`Error: ${errorMessage}`);
-      } finally {
-        setLoading(false);
-      }
+      // Proceed with submission directly if auto-submit or no unanswered questions
+      await proceedWithSubmission();
     },
-    [state, selectedAnswers, textInputAnswers, subjectsQuestions, navigate]
+    [state, selectedAnswers, textInputAnswers, subjectsQuestions, proceedWithSubmission]
   );
 
   const goToQuestion = (index: number) => {
@@ -978,8 +990,12 @@ const ExamScreen = () => {
     currentQuestionIndex === totalQuestionsForSubject - 1;
 
   // Get base URL for images
-  const baseUrl = import.meta.env.VITE_BASE_URL || "http://localhost:8000";
-  const imageUrl = currentQuestion.image_url
+  const baseUrl = import.meta.env.VITE_ABSOLUTE_URL;
+  const imageUrl = currentQuestion.image
+    ? currentQuestion.image.startsWith("http")
+      ? currentQuestion.image
+      : `${baseUrl}/storage/${currentQuestion.image}`
+    : currentQuestion.image_url
     ? currentQuestion.image_url.startsWith("http")
       ? currentQuestion.image_url
       : `${baseUrl}${currentQuestion.image_url}`
@@ -1020,6 +1036,55 @@ const ExamScreen = () => {
         onClose={() => setShowSubjectModal(false)}
         onSelectSubject={handleSwitchSubject}
       />
+
+      {/* Confirm Submit Modal */}
+      <Modal
+        open={showConfirmSubmitModal}
+        onCancel={() => {
+          setShowConfirmSubmitModal(false);
+        }}
+        footer={null}
+        closable={true}
+        width={400}
+        centered
+      >
+        <div className="text-center py-2">
+          <div className="flex justify-center mb-4">
+            <div className="w-14 h-14 rounded-full bg-yellow-100 flex items-center justify-center">
+              <AlertTriangle className="h-7 w-7 text-yellow-600" />
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Unanswered Questions</h3>
+          <p className="text-muted-foreground text-sm mb-6">
+            You have unanswered questions in {unansweredSubjectsCount}{" "}
+            {unansweredSubjectsCount === 1 ? "subject" : "subjects"}.
+            <br />
+            Are you sure you want to submit?
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button 
+              onClick={() => {
+                setShowConfirmSubmitModal(false);
+                proceedWithSubmission();
+              }} 
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? "Submitting..." : "Yes, Submit"}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowConfirmSubmitModal(false);
+              }} 
+              className="w-full"
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Question Content */}
       <div className="flex-1 overflow-y-auto p-6 relative" style={{ zIndex: 1 }}>

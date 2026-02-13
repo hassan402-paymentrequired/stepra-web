@@ -17,7 +17,7 @@ export const QuestionDisplay = ({ questionText, imageUrl }: QuestionDisplayProps
           <img
             src={imageUrl}
             alt="Question diagram"
-            className="max-w-full h-auto rounded-lg border border-border"
+            className="size-64 object-cover border-border"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
             }}

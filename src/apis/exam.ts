@@ -19,6 +19,7 @@ export interface Question {
   order: number;
   answers?: Answer[];
   expected_answer?: string;
+  image?: string | null;
   image_url?: string;
   image_path?: string;
 }
