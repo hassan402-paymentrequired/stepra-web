@@ -24,13 +24,15 @@ const UnilagDepartmentSubjects = () => {
   const navigate = useNavigate();
   const { departmentId } = useParams<{ departmentId: string }>();
   const { data: user } = useUser();
-  const [subjects, setSubjects] = useState<Array<{ id: number; name: string; slug: string }>>([]);
+  const [subjects, setSubjects] = useState<Array<{ id: number; name: string; slug: string; tests?: Array<{ id: number; name: string }> }>>([]);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [selectedTestId, setSelectedTestId] = useState<number | null>(null);
   const [questionCount, setQuestionCount] = useState<number | null>(null);
   const [timeMinutes, setTimeMinutes] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [startingExam, setStartingExam] = useState(false);
   const [showSubjectModal, setShowSubjectModal] = useState(false);
+  const [showTestModal, setShowTestModal] = useState(false);
   const [showQuestionCountModal, setShowQuestionCountModal] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
@@ -67,6 +69,9 @@ const UnilagDepartmentSubjects = () => {
   }, [user]);
 
   const maxQuestionsPerSubject = hasActiveSubscription ? 50 : 5;
+  const selectedSubjectData = subjects.find((s) => s.name === selectedSubject);
+  const testsForSubject = selectedSubjectData?.tests ?? [];
+  const requiresTestSelection = testsForSubject.length > 0;
   const questionCountOptions = Array.from(
     { length: maxQuestionsPerSubject },
     (_, i) => i + 1
@@ -188,11 +193,12 @@ const UnilagDepartmentSubjects = () => {
     try {
       setStartingExam(true);
 
-      // Fetch practice questions
+      // Fetch practice questions (pass subject_test_id when user selected a test)
       const questionsResponse = await getPracticeQuestions(
         "DLI",
         selectedSubject,
-        questionCount
+        questionCount,
+        selectedTestId ?? undefined
       );
 
       if (!questionsResponse.success) {
@@ -313,8 +319,28 @@ const UnilagDepartmentSubjects = () => {
             </button>
           </div>
 
-          {/* Question Count Selection */}
-          {selectedSubject && (
+          {/* Test Selection - only when subject has tests (DLI) */}
+          {selectedSubject && requiresTestSelection && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">
+                Select Test *
+              </label>
+              <button
+                onClick={() => setShowTestModal(true)}
+                className="w-full p-4 border border-border rounded-lg text-left flex items-center justify-between hover:bg-accent transition-colors"
+              >
+                <span className={selectedTestId ? "" : "text-muted-foreground"}>
+                  {selectedTestId
+                    ? testsForSubject.find((t) => t.id === selectedTestId)?.name
+                    : "Choose a test"}
+                </span>
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              </button>
+            </div>
+          )}
+
+          {/* Question Count Selection - show when subject selected, and when test required: after test selected */}
+          {selectedSubject && (!requiresTestSelection || selectedTestId) && (
             <div className="mb-6">
               <label className="block text-sm font-medium mb-2">
                 Number of Questions *
@@ -350,16 +376,19 @@ const UnilagDepartmentSubjects = () => {
           )}
 
           {/* Start Practice Button */}
-          {selectedSubject && questionCount && timeMinutes && (
-            <Button
-              onClick={handleStartPractice}
-              disabled={startingExam}
-              className="w-full"
-              size="lg"
-            >
-              {startingExam ? "Starting..." : "Start Practice"}
-            </Button>
-          )}
+          {selectedSubject &&
+            (!requiresTestSelection || selectedTestId) &&
+            questionCount &&
+            timeMinutes && (
+              <Button
+                onClick={handleStartPractice}
+                disabled={startingExam}
+                className="w-full"
+                size="lg"
+              >
+                {startingExam ? "Starting..." : "Start Practice"}
+              </Button>
+            )}
 
           {/* Subject Selection Modal */}
           {showSubjectModal && (
@@ -386,9 +415,10 @@ const UnilagDepartmentSubjects = () => {
                           key={subject.id}
                           onClick={() => {
                             setSelectedSubject(subject.name);
-                            setShowSubjectModal(false);
+                            setSelectedTestId(null);
                             setQuestionCount(null);
                             setTimeMinutes(null);
+                            setShowSubjectModal(false);
                           }}
                           className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${
                             isSelected ? 'bg-primary/10 border-primary' : ''
@@ -402,6 +432,70 @@ const UnilagDepartmentSubjects = () => {
                   ) : (
                     <div className="p-4 text-center">
                       <p className="text-muted-foreground">No subjects available.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Test Selection Modal */}
+          {showTestModal && (
+            <div
+              className="fixed inset-0 bg-black/50 flex items-end z-50"
+              onClick={() => setShowTestModal(false)}
+            >
+              <div
+                className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center p-4 border-b">
+                  <div>
+                    <h3 className="font-semibold">Select Test</h3>
+                    {selectedSubject && (
+                      <p className="text-sm text-muted-foreground">
+                        for {selectedSubject}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setShowTestModal(false)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="overflow-y-auto">
+                  {testsForSubject.length > 0 ? (
+                    testsForSubject.map((test) => {
+                      const isSelected = selectedTestId === test.id;
+                      return (
+                        <button
+                          key={test.id}
+                          onClick={() => {
+                            setSelectedTestId(test.id);
+                            setQuestionCount(null);
+                            setTimeMinutes(null);
+                            setShowTestModal(false);
+                          }}
+                          className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${
+                            isSelected
+                              ? "bg-primary/10 border-primary"
+                              : ""
+                          }`}
+                        >
+                          <span className="font-medium">{test.name}</span>
+                          {isSelected && (
+                            <Check className="h-5 w-5 text-primary" />
+                          )}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="p-4 text-center">
+                      <p className="text-muted-foreground">
+                        No tests available for this subject.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -438,8 +532,8 @@ const UnilagDepartmentSubjects = () => {
                         key={count}
                         onClick={() => {
                           setQuestionCount(count);
-                          setShowQuestionCountModal(false);
                           setTimeMinutes(null);
+                          setShowQuestionCountModal(false);
                         }}
                         className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${
                           isSelected ? 'bg-primary/10 border-primary' : ''

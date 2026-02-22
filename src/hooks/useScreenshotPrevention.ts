@@ -408,7 +408,6 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
                 possible_screenshot_app: true,
               });
             }
-            toast.warning('Rapid window switching detected. Screenshot app usage suspected.');
           }
           
           // Reset counter after window

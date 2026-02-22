@@ -90,11 +90,16 @@ export const getExamQuestions = async (
 export const getPracticeQuestions = async (
   examType: string,
   subject: string,
-  count: number
+  count: number,
+  subjectTestId?: number
 ): Promise<PracticeQuestionsResponse> => {
-  const response = await api.get('/questions/practice', {
-    params: { exam_type: examType, subject, count },
-  });
+  const params: Record<string, string | number> = {
+    exam_type: examType,
+    subject,
+    count,
+  };
+  if (subjectTestId) params.subject_test_id = subjectTestId;
+  const response = await api.get('/questions/practice', { params });
   return response.data;
 };
 
@@ -105,12 +110,19 @@ export interface Department {
   description?: string;
 }
 
+export interface SubjectTest {
+  id: number;
+  subject_id: number;
+  name: string;
+}
+
 export interface DepartmentSubjectsResponse {
   success: boolean;
   data: Array<{
     id: number;
     name: string;
     slug: string;
+    tests?: SubjectTest[];
   }>;
 }
 
