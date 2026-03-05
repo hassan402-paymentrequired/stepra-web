@@ -12,11 +12,13 @@ export interface SubscriptionPlan {
 
 export interface SubscriptionStatus {
   has_active_subscription: boolean;
+  other_devices_active: boolean;
   subscription_status: string;
   subscription_expires_at: string | null;
   subscription_device_bound?: boolean;
   subscription: {
     id: number;
+    type: string;
     plan: {
       name: string;
       price: number;

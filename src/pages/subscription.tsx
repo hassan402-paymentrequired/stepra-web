@@ -213,10 +213,7 @@ const Subscription = () => {
   }
 
   const hasActiveSubscription = status?.has_active_subscription || false;
-  const subscriptionOnOtherDevice =
-    status?.subscription_status === "active" &&
-    status?.subscription_device_bound &&
-    !hasActiveSubscription;
+  const subscriptionOnOtherDevice = !hasActiveSubscription && status?.other_devices_active;
 
   return (
     <AppLayout>
@@ -226,12 +223,11 @@ const Subscription = () => {
           {subscriptionOnOtherDevice && (
             <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-6 mb-6">
               <h3 className="text-lg font-semibold text-amber-800 mb-2">
-                Subscription is on another device
+                Multi-Device Subscription
               </h3>
               <p className="text-amber-700 text-sm">
-                Your subscription is valid only on the device you used when you
-                subscribed. To use it on this device, you would need to
-                subscribe again or use the same device.
+                You have an active subscription on another device. Stepra subscriptions are bound per device.
+                To use Stepra on this device as well, you can purchase a new plan below.
               </p>
             </div>
           )}
