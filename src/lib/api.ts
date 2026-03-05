@@ -13,13 +13,23 @@ const instance = axios.create({
   },
 });
 
-// Request interceptor: add auth token
+// Request interceptor: add auth token and device id
 instance.interceptors.request.use(
   (config) => {
     const token = getSessionWithKey('token');
     if (token != null && !isEmpty(token)) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    let deviceId = localStorage.getItem('device_id');
+    if (!deviceId) {
+      deviceId = window.crypto && window.crypto.randomUUID
+        ? window.crypto.randomUUID()
+        : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('device_id', deviceId);
+    }
+    config.headers['X-Device-Id'] = deviceId;
+
     return config;
   },
   (error) => {
