@@ -17,8 +17,20 @@ import {
   Loader2,
   CreditCard,
   Shield,
+  Key,
 } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AxiosError } from "axios";
+import { toast } from "sonner";
 
 const Subscription = () => {
   const { refetch: refetchUser } = useUser();
@@ -27,6 +39,8 @@ const Subscription = () => {
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
   const [status, setStatus] = useState<SubscriptionStatus | null>(null);
   const [paymentWindow, setPaymentWindow] = useState<Window | null>(null);
+  const [pin, setPin] = useState("");
+  const [pinProcessing, setPinProcessing] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -154,6 +168,40 @@ const Subscription = () => {
     }
   };
 
+  const handlePinRedeem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pin.length !== 6) {
+      alert("PIN must be exactly 6 digits.");
+      return;
+    }
+
+    setPinProcessing(true);
+    try {
+      // Import the dynamic function we just added via a quick require or we can make sure it's exported at the top
+      const { redeemSubscriptionPin } = await import('@/apis/subscription');
+      const response = await redeemSubscriptionPin(pin);
+
+      if (response.success) {
+        await fetchData();
+        await refetchUser();
+        try {
+          // Bind this device to the newly activated subscription
+          const { registerSubscriptionDevice } = await import('@/apis/subscription');
+          await registerSubscriptionDevice();
+        } catch {
+          // Ignore
+        }
+        toast.success("Your subscription has been activated successfully via PIN!");
+        setPin("");
+      }
+    } catch (error) {
+      const errorMessage = getApiErrorMessage(error as AxiosError);
+      toast.error(`PIN Error: ${errorMessage}`);
+    } finally {
+      setPinProcessing(false);
+    }
+  };
+
   if (loading) {
     return (
       <AppLayout>
@@ -213,7 +261,7 @@ const Subscription = () => {
           )}
 
           {/* Error Message if no plan available */}
-          {!plan && !loading && (
+          {!plan && !loading && !hasActiveSubscription && (
             <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 mb-6">
               <div className="flex items-center gap-3 mb-2">
                 <Shield className="h-6 w-6 text-yellow-600" />
@@ -279,24 +327,88 @@ const Subscription = () => {
               </div>
 
               {!hasActiveSubscription && (
-                <Button
-                    onClick={handleSubscribe}
-                    disabled={processing}
-                    className="w-full"
-                    size="lg"
-                  >
-                    {processing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Subscribe for ₦{plan.price.toLocaleString()}/year
-                      </>
-                    )}
-                  </Button>
+                <Tabs defaultValue="paystack" className="w-full mt-8">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="paystack">
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Pay Online
+                    </TabsTrigger>
+                    <TabsTrigger value="pin">
+                      <Key className="w-4 h-4 mr-2" />
+                      Use PIN
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="paystack" className="mt-4">
+                    <Button
+                      onClick={handleSubscribe}
+                      disabled={processing || pinProcessing}
+                      className="w-full"
+                      size="lg"
+                    >
+                      {processing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="h-4 w-4 mr-2" />
+                          Subscribe for ₦{plan.price.toLocaleString()}/year
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-sm text-muted-foreground text-center mt-3">
+                      Secure payment powered by Paystack
+                    </p>
+                  </TabsContent>
+
+                  <TabsContent value="pin" className="mt-4">
+                    <Card>
+                      <CardHeader className="pb-4">
+                        <CardTitle className="text-lg">Activate via PIN</CardTitle>
+                        <CardDescription>
+                          If you received a 6-digit subscription PIN from an administrator, enter it below to activate your account instantly.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <form onSubmit={handlePinRedeem} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="pin">6-Digit PIN</Label>
+                            <Input
+                              id="pin"
+                              type="text"
+                              maxLength={6}
+                              placeholder="e.g. 123456"
+                              className="font-mono text-center tracking-widest text-lg"
+                              value={pin}
+                              onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                              disabled={pinProcessing || processing}
+                              required
+                            />
+                          </div>
+                          <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={pinProcessing || processing || pin.length !== 6}
+                          >
+                            {pinProcessing ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Verifying...
+                              </>
+                            ) : (
+                              <>
+                                <Key className="w-4 h-4 mr-2" />
+                                Activate Subscription
+                              </>
+                            )}
+                          </Button>
+                        </form>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
               )}
 
               {hasActiveSubscription && (

@@ -114,3 +114,10 @@ export const registerSubscriptionDevice = async (): Promise<{
   const response = await api.post('/subscriptions/register-device', {});
   return response.data;
 };
+
+export const redeemSubscriptionPin = async (
+  pin: string
+): Promise<{ success: boolean; message: string; data?: any }> => {
+  const response = await api.post('/subscriptions/redeem-pin', { pin });
+  return response.data;
+};
