@@ -232,29 +232,7 @@ const Subscription = () => {
             </div>
           )}
 
-          {/* Current Status */}
-          {hasActiveSubscription && status?.subscription && (
-            <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6 mb-6">
-              <div className="flex items-center gap-3 mb-4">
-                <CheckCircle2 className="h-6 w-6 text-green-600" />
-                <h3 className="text-xl font-semibold text-green-800">
-                  Active Subscription
-                </h3>
-              </div>
-              <div className="space-y-2">
-                <p className="text-green-700">
-                  <span className="font-medium">Plan:</span>{" "}
-                  {status.subscription.plan.name}
-                </p>
-                <p className="text-green-700">
-                  <span className="font-medium">Expires:</span>{" "}
-                  {new Date(
-                    status.subscription.expires_at
-                  ).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          )}
+         
 
           {/* Error Message if no plan available */}
           {!plan && !loading && !hasActiveSubscription && (
