@@ -58,7 +58,7 @@ const Leaderboard = () => {
     };
 
     const getRankBg = (rank: number, isCurrentUser: boolean) => {
-        if (isCurrentUser) return "bg-primary/5 border-primary/20 shadow-sm";
+        if (rank && isCurrentUser) return "bg-primary/5 border-primary/20 shadow-sm";
         return "bg-card border-border hover:border-primary/30";
     };
 
