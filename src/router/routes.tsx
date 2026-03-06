@@ -18,6 +18,7 @@ import {
   Referral,
   Subscription,
   Profile,
+  Leaderboard,
 } from '@/pages';
 import { ErrorBoundaryFallback } from '../components/error-boundary-fallback';
 import { injectErrorBoundary } from '@/utils';
@@ -106,6 +107,10 @@ const routesObject: RouteObject[] = [
       {
         path: 'profile',
         element: <Profile />,
+      },
+      {
+        path: 'leaderboard',
+        element: <Leaderboard />,
       },
     ],
   },
