@@ -135,10 +135,10 @@ const Home = () => {
                 <ArrowRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <h2 className="text-lg font-bold text-foreground mb-1.5 group-hover:text-primary transition-colors">
-                Practice Unilag
+                Practice DLI
               </h2>
               <p className="text-muted-foreground text-xs leading-relaxed mb-3">
-                Enhance your skills with Unilag practice questions
+                Enhance your skills with DLI practice questions
               </p>
               <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
                 <span>Start practicing</span>
