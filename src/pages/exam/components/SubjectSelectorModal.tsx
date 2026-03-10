@@ -26,7 +26,7 @@ export const SubjectSelectorModal = ({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="overflow-y-auto p-4">
+        <div className="overflow-y-auto p-4 space-y-3 flex flex-col gap-y-3">
           {subjects.map((subject) => {
             const isCurrent = subject === currentSubject;
             return (

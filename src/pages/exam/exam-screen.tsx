@@ -9,7 +9,7 @@ import type { Question } from "@/apis/exam";
 import { toast } from "sonner";
 import { useScreenshotPrevention } from "@/hooks/useScreenshotPrevention";
 import { useUser } from "@/lib/auth";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { ExamHeader } from "./components/ExamHeader";
 import { QuestionDisplay } from "./components/QuestionDisplay";
 import { AnswerOptions } from "./components/AnswerOptions";
@@ -59,27 +59,27 @@ const ExamScreen = () => {
     const preventScreenshot = (e: KeyboardEvent) => {
       // More comprehensive key detection
       const isMac = /Mac/.test(navigator.platform);
-      
+
       const prohibitedShortcuts = [
         // Windows/Linux screenshots
         { key: 'PrintScreen' },
         { key: 'Insert', alt: true }, // Alt+Print Screen
         { key: 's', ctrl: true }, // Save page
         { key: 'p', ctrl: true }, // Print
-        
+
         // Mac screenshots - ALL variations
         { key: '3', cmd: true, shift: true }, // Full screen
         { key: '4', cmd: true, shift: true }, // Area selection
         { key: '5', cmd: true, shift: true }, // Screenshot options
         { key: '6', cmd: true, shift: true }, // Touch bar
-        
+
         // Developer tools  
         { key: 'F12' },
         { key: 'i', ctrl: true, shift: true },
         { key: 'j', ctrl: true, shift: true },
         { key: 'c', ctrl: true, shift: true },
         { key: 'i', cmd: true, option: true }, // Mac dev tools
-        
+
         // View source
         { key: 'u', ctrl: true },
         { key: 'u', cmd: true },
@@ -89,14 +89,14 @@ const ExamScreen = () => {
       const isProhibited = prohibitedShortcuts.some(shortcut => {
         const keyMatch = e.key.toLowerCase() === shortcut.key.toLowerCase();
         if (!keyMatch) return false;
-        
+
         // Check modifier keys - all specified modifiers must match exactly
         const ctrlMatch = shortcut.ctrl === undefined ? !e.ctrlKey : (shortcut.ctrl === e.ctrlKey);
         const shiftMatch = shortcut.shift === undefined ? !e.shiftKey : (shortcut.shift === e.shiftKey);
         const cmdMatch = shortcut.cmd === undefined ? !e.metaKey : (shortcut.cmd === e.metaKey);
         const altMatch = shortcut.alt === undefined ? !e.altKey : (shortcut.alt === e.altKey);
         const optionMatch = shortcut.option === undefined ? !e.altKey : (shortcut.option === e.altKey);
-        
+
         return keyMatch && ctrlMatch && shiftMatch && cmdMatch && altMatch && optionMatch;
       });
 
@@ -104,11 +104,11 @@ const ExamScreen = () => {
         e.preventDefault();
         e.stopImmediatePropagation();
         e.stopPropagation();
-        
+
         // Show platform-specific message
         const shortcut = isMac ? 'Cmd+Shift+3/4/5' : 'Print Screen';
         toast.error(`Screenshots (${shortcut}) are strictly prohibited during practice sessions.`);
-        
+
         // Log violation
         console.warn('Screenshot attempt blocked:', {
           key: e.key,
@@ -117,7 +117,7 @@ const ExamScreen = () => {
           cmd: e.metaKey,
           platform: navigator.platform
         });
-        
+
         return false;
       }
     };
@@ -153,7 +153,7 @@ const ExamScreen = () => {
       e.preventDefault();
       return false;
     };
-    
+
     // Allow drag on interactive elements only
     const preventDrag = (e: Event) => {
       const target = e.target as HTMLElement;
@@ -185,19 +185,19 @@ const ExamScreen = () => {
     // Prevent copy/cut only on question content
     document.addEventListener('copy', preventSelection, true);
     document.addEventListener('cut', preventSelection, true);
-    
+
     // Prevent screen capture using Screen Capture API (if available)
     let originalGetDisplayMedia: any = null;
     if ('getDisplayMedia' in navigator.mediaDevices) {
       // Store original function
       originalGetDisplayMedia = (navigator.mediaDevices as any).getDisplayMedia;
       // Override to prevent screen sharing
-      (navigator.mediaDevices as any).getDisplayMedia = async function() {
+      (navigator.mediaDevices as any).getDisplayMedia = async function () {
         toast.error('Screen sharing is not allowed during practice sessions.');
         throw new Error('Screen sharing is disabled');
       };
     }
-    
+
     // Disable print screen more aggressively
     window.addEventListener('keydown', (e) => {
       // Additional check for PrintScreen key
@@ -342,7 +342,7 @@ const ExamScreen = () => {
       }
     };
   }, [isBlurred]);
-      
+
   // Refs for performance optimization
   const submitTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null as unknown as ReturnType<typeof setTimeout>);
   const autoSubmitRef = useRef(false);
@@ -355,9 +355,9 @@ const ExamScreen = () => {
   const [currentSubject, setCurrentSubject] = useState<string>(
     state?.subjects?.[0] || Object.keys(state?.subjectsQuestions || {})[0] || ""
   );
-  
+
   // Optimized subject index initialization
-  const [subjectCurrentIndex, setSubjectCurrentIndex] = useState<Record<string, number>>(() => 
+  const [subjectCurrentIndex, setSubjectCurrentIndex] = useState<Record<string, number>>(() =>
     Object.keys(state?.subjectsQuestions || {}).reduce((acc, subject) => {
       acc[subject] = 0;
       return acc;
@@ -367,7 +367,7 @@ const ExamScreen = () => {
   // Answer state
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number | string>>({});
   const [textInputAnswers, setTextInputAnswers] = useState<Record<number, string>>({});
-  
+
   // UI state
   const [timeRemaining, setTimeRemaining] = useState((state?.timeMinutes || 30) * 60);
   const [loading, setLoading] = useState(false);
@@ -375,6 +375,7 @@ const ExamScreen = () => {
   const [showCalculator, setShowCalculator] = useState(false);
   const [showConfirmSubmitModal, setShowConfirmSubmitModal] = useState(false);
   const [unansweredSubjectsCount, setUnansweredSubjectsCount] = useState(0);
+  const [isFooterExpanded, setIsFooterExpanded] = useState(false);
   const [questionStartTime, setQuestionStartTime] = useState<Record<number, number>>({});
 
   // Calculator state
@@ -391,7 +392,7 @@ const ExamScreen = () => {
     const totalQuestionsForSubject = currentQuestions.length;
 
     // Optimized completion check - only check if we have questions
-    const allSubjectsCompleted = Object.keys(subjectsQuestions).length > 0 && 
+    const allSubjectsCompleted = Object.keys(subjectsQuestions).length > 0 &&
       Object.entries(subjectsQuestions).every(([subject, questions]) => {
         const subjectIndex = subjectCurrentIndex[subject] || 0;
         return subjectIndex >= questions.length - 1;
@@ -418,10 +419,10 @@ const ExamScreen = () => {
   }, [subjectsQuestions, currentSubject, subjectCurrentIndex]);
 
   // Destructure memoized values
-  const { 
-    currentQuestions, 
-    currentQuestionIndex, 
-    currentQuestion, 
+  const {
+    currentQuestions,
+    currentQuestionIndex,
+    currentQuestion,
     totalQuestionsForSubject,
     allSubjectsCompleted,
   } = memoizedData;
@@ -436,12 +437,12 @@ const ExamScreen = () => {
       e.preventDefault();
       e.returnValue = message;
 
-        // Auto-complete the attempt (answers are already submitted as user progresses)
-        if (!isSubmitting && state?.attemptId && !autoSubmitRef.current) {
-          isSubmitting = true;
-          autoSubmitRef.current = true;
+      // Auto-complete the attempt (answers are already submitted as user progresses)
+      if (!isSubmitting && state?.attemptId && !autoSubmitRef.current) {
+        isSubmitting = true;
+        autoSubmitRef.current = true;
 
-          // Use sendBeacon for reliable submission during page unload
+        // Use sendBeacon for reliable submission during page unload
         const completeData = {
           subjects: state.subjects?.map(subject => ({
             subject,
@@ -505,7 +506,7 @@ const ExamScreen = () => {
   // Auto-submit function with optimized batch processing
   const handleAutoSubmit = useCallback(async (reason: 'user_exit' | 'timeout' | 'manual' = 'user_exit') => {
     if (autoSubmitRef.current || !state?.attemptId) return;
-    
+
     autoSubmitRef.current = true;
     setLoading(true);
 
@@ -530,8 +531,8 @@ const ExamScreen = () => {
       const batchSize = 20;
       for (let i = 0; i < submissions.length; i += batchSize) {
         const batch = submissions.slice(i, i + batchSize);
-        await Promise.allSettled(batch.map(answer => 
-          submitAnswer(state.attemptId, answer).catch(err => 
+        await Promise.allSettled(batch.map(answer =>
+          submitAnswer(state.attemptId, answer).catch(err =>
             console.warn('Answer submission failed:', err)
           )
         ));
@@ -539,7 +540,7 @@ const ExamScreen = () => {
 
       // Complete attempt
       await completeExamAttempt(state.attemptId);
-      
+
       toast.success(`Practice session ${reason === 'user_exit' ? 'auto-submitted' : 'completed'} successfully!`);
       navigate('/exam/results', { state: { attemptId: state.attemptId, autoSubmitted: reason === 'user_exit', isPracticeSession: state?.isPractice === true } });
 
@@ -629,7 +630,7 @@ const ExamScreen = () => {
       // Only submit if we haven't already submitted and we have an attempt
       if (!hasSubmittedOnUnmount.current && state?.attemptId && !autoSubmitRef.current) {
         hasSubmittedOnUnmount.current = true;
-        
+
         // Submit all remaining answers and complete the exam
         const submissions = [
           ...Object.entries(selectedAnswers).map(([qId, aId]) => ({
@@ -667,7 +668,7 @@ const ExamScreen = () => {
           })),
           duration_minutes: state.timeMinutes,
         });
-        
+
         if (navigator.sendBeacon) {
           navigator.sendBeacon(
             `/api/exam-attempts/${state.attemptId}/complete`,
@@ -685,10 +686,10 @@ const ExamScreen = () => {
       return;
     }
 
-    console.log('handleSelectAnswer called:', { 
-      questionId: currentQuestion.id, 
-      answerId, 
-      questionType: currentQuestion.question_type 
+    console.log('handleSelectAnswer called:', {
+      questionId: currentQuestion.id,
+      answerId,
+      questionType: currentQuestion.question_type
     });
 
     setSelectedAnswers({
@@ -700,8 +701,8 @@ const ExamScreen = () => {
     try {
       const timeSpent = questionStartTime[currentQuestion.id]
         ? Math.floor(
-            (Date.now() - questionStartTime[currentQuestion.id]) / 1000
-          )
+          (Date.now() - questionStartTime[currentQuestion.id]) / 1000
+        )
         : 0;
 
       await submitAnswer(state.attemptId, {
@@ -734,8 +735,8 @@ const ExamScreen = () => {
     try {
       const timeSpent = questionStartTime[currentQuestion.id]
         ? Math.floor(
-            (Date.now() - questionStartTime[currentQuestion.id]) / 1000
-          )
+          (Date.now() - questionStartTime[currentQuestion.id]) / 1000
+        )
         : 0;
 
       // For text/numeric input, send answer_text directly to the API
@@ -751,8 +752,8 @@ const ExamScreen = () => {
 
   const handleNext = async () => {
     // Submit text answer if exists before moving to next question
-    if (currentQuestion && 
-        (currentQuestion.question_type === 'text_input' || currentQuestion.question_type === 'numeric_input')) {
+    if (currentQuestion &&
+      (currentQuestion.question_type === 'text_input' || currentQuestion.question_type === 'numeric_input')) {
       const answerText = textInputAnswers[currentQuestion.id];
       if (answerText && answerText.trim() && state?.attemptId) {
         try {
@@ -996,12 +997,12 @@ const ExamScreen = () => {
       ? currentQuestion.image
       : `${baseUrl}/storage/${currentQuestion.image}`
     : currentQuestion.image_url
-    ? currentQuestion.image_url.startsWith("http")
-      ? currentQuestion.image_url
-      : `${baseUrl}${currentQuestion.image_url}`
-    : currentQuestion.image_path
-    ? `${baseUrl}/storage/${currentQuestion.image_path}`
-    : null;
+      ? currentQuestion.image_url.startsWith("http")
+        ? currentQuestion.image_url
+        : `${baseUrl}${currentQuestion.image_url}`
+      : currentQuestion.image_path
+        ? `${baseUrl}/storage/${currentQuestion.image_path}`
+        : null;
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background exam-content">
@@ -1062,21 +1063,21 @@ const ExamScreen = () => {
             Are you sure you want to submit?
           </p>
           <div className="flex flex-col gap-2">
-            <Button 
+            <Button
               onClick={() => {
                 setShowConfirmSubmitModal(false);
                 proceedWithSubmission();
-              }} 
+              }}
               className="w-full"
               disabled={loading}
             >
               {loading ? "Submitting..." : "Yes, Submit"}
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setShowConfirmSubmitModal(false);
-              }} 
+              }}
               className="w-full"
               disabled={loading}
             >
@@ -1120,34 +1121,60 @@ const ExamScreen = () => {
       </div>
 
       {/* Navigation Footer */}
-      <div className="border-t bg-card p-4">
+      <div className="border-t bg-card p-4 relative z-10">
         <div className="max-w-4xl mx-auto">
-          {/* Question Grid */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {currentQuestions.map((q, index) => {
-              const isAnswered =
-                (q.question_type === "multiple_choice" ||
-                q.question_type === "true_false"
-                  ? selectedAnswers[q.id] !== undefined
-                  : textInputAnswers[q.id] !== undefined &&
+          {/* Collapse/Expand Toggle */}
+          <div className="flex justify-center -mt-4 mb-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-4 rounded-t-none rounded-b-lg bg-card border border-t-0 border-border/50 text-muted-foreground hover:text-primary transition-all shadow-sm flex items-center gap-1"
+              onClick={() => setIsFooterExpanded(!isFooterExpanded)}
+            >
+              {isFooterExpanded ? (
+                <>
+                  <ChevronDown className="h-3 w-3" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Hide Questions</span>
+                </>
+              ) : (
+                <>
+                  <ChevronUp className="h-3 w-3" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Show Questions</span>
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Question Grid (Collapsible) */}
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${isFooterExpanded ? "max-h-60 mb-4 opacity-100" : "max-h-0 opacity-0"
+              }`}
+          >
+            <div className="flex flex-wrap gap-2 py-1">
+              {currentQuestions.map((q, index) => {
+                const isAnswered =
+                  (q.question_type === "multiple_choice" ||
+                    q.question_type === "true_false"
+                    ? selectedAnswers[q.id] !== undefined
+                    : textInputAnswers[q.id] !== undefined &&
                     textInputAnswers[q.id] !== "") || false;
-              const isCurrent = index === currentQuestionIndex;
-              return (
-                <button
-                  key={q.id}
-                  onClick={() => goToQuestion(index)}
-                  className={`w-10 h-10 rounded border-2 flex items-center justify-center text-sm font-medium ${
-                    isCurrent
-                      ? "bg-primary border-primary !text-primary-foreground"
-                      : isAnswered
-                      ? "bg-primary/20 border-primary !text-primary"
-                      : "border-muted-foreground !text-muted-foreground"
-                  }`}
-                > 
-                  {index + 1}
-                </button>
-              );
-            })}
+                const isCurrent = index === currentQuestionIndex;
+                return (
+                  <button
+                    key={q.id}
+                    onClick={() => goToQuestion(index)}
+                    className={`w-10 h-10 rounded border-2 flex items-center justify-center text-sm font-medium transition-colors ${isCurrent
+                        ? "bg-primary border-primary !text-primary-foreground"
+                        : isAnswered
+                          ? "bg-primary/20 border-primary !text-primary"
+                          : "border-muted-foreground !text-muted-foreground"
+                      }`}
+                  >
+                    {index + 1}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Navigation Buttons */}
