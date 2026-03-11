@@ -96,6 +96,7 @@ const UnilagDepartmentSubjects = () => {
       subjects: [{
         subject: selectedSubject,
         question_count: Math.min(questionCount, allQuestions.length),
+        questions: allQuestions,
       }],
       duration_minutes: timeMinutes,
     });
@@ -393,13 +394,13 @@ const UnilagDepartmentSubjects = () => {
           {/* Subject Selection Modal */}
           {showSubjectModal && (
             <div className="fixed inset-0 bg-black/50 flex items-end z-50" onClick={() => setShowSubjectModal(false)}>
-              <div 
+              <div
                 className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex justify-between items-center p-4 border-b">
                   <h3 className="font-semibold">Select Course</h3>
-                  <button 
+                  <button
                     onClick={() => setShowSubjectModal(false)}
                     className="text-muted-foreground hover:text-foreground"
                   >
@@ -420,9 +421,8 @@ const UnilagDepartmentSubjects = () => {
                             setTimeMinutes(null);
                             setShowSubjectModal(false);
                           }}
-                          className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${
-                            isSelected ? 'bg-primary/10 border-primary' : ''
-                          }`}
+                          className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${isSelected ? 'bg-primary/10 border-primary' : ''
+                            }`}
                         >
                           <span className="font-medium">{subject.name}</span>
                           {isSelected && <Check className="h-5 w-5 text-primary" />}
@@ -478,11 +478,10 @@ const UnilagDepartmentSubjects = () => {
                             setTimeMinutes(null);
                             setShowTestModal(false);
                           }}
-                          className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${
-                            isSelected
+                          className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${isSelected
                               ? "bg-primary/10 border-primary"
                               : ""
-                          }`}
+                            }`}
                         >
                           <span className="font-medium">{test.name}</span>
                           {isSelected && (
@@ -506,7 +505,7 @@ const UnilagDepartmentSubjects = () => {
           {/* Question Count Selection Modal */}
           {showQuestionCountModal && (
             <div className="fixed inset-0 bg-black/50 flex items-end z-50" onClick={() => setShowQuestionCountModal(false)}>
-              <div 
+              <div
                 className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -517,7 +516,7 @@ const UnilagDepartmentSubjects = () => {
                       <p className="text-sm text-muted-foreground">for {selectedSubject}</p>
                     )}
                   </div>
-                  <button 
+                  <button
                     onClick={() => setShowQuestionCountModal(false)}
                     className="text-muted-foreground hover:text-foreground"
                   >
@@ -535,9 +534,8 @@ const UnilagDepartmentSubjects = () => {
                           setTimeMinutes(null);
                           setShowQuestionCountModal(false);
                         }}
-                        className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${
-                          isSelected ? 'bg-primary/10 border-primary' : ''
-                        }`}
+                        className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${isSelected ? 'bg-primary/10 border-primary' : ''
+                          }`}
                       >
                         <span className="font-medium">{count} question{count !== 1 ? 's' : ''}</span>
                         {isSelected && <Check className="h-5 w-5 text-primary" />}
@@ -547,8 +545,8 @@ const UnilagDepartmentSubjects = () => {
                 </div>
                 <div className="p-4 border-t bg-muted/30">
                   <p className="text-xs text-muted-foreground">
-                    {hasActiveSubscription 
-                      ? 'Premium: Up to 50 questions per session' 
+                    {hasActiveSubscription
+                      ? 'Premium: Up to 50 questions per session'
                       : 'Free: Up to 5 questions per session'}
                   </p>
                 </div>
@@ -559,13 +557,13 @@ const UnilagDepartmentSubjects = () => {
           {/* Time Selection Modal */}
           {showTimeModal && (
             <div className="fixed inset-0 bg-black/50 flex items-end z-50" onClick={() => setShowTimeModal(false)}>
-              <div 
+              <div
                 className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex justify-between items-center p-4 border-b">
                   <h3 className="font-semibold">Select Time (Minutes)</h3>
-                  <button 
+                  <button
                     onClick={() => setShowTimeModal(false)}
                     className="text-muted-foreground hover:text-foreground"
                   >
@@ -582,9 +580,8 @@ const UnilagDepartmentSubjects = () => {
                           setTimeMinutes(minutes);
                           setShowTimeModal(false);
                         }}
-                        className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${
-                          isSelected ? 'bg-primary/10 border-primary' : ''
-                        }`}
+                        className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${isSelected ? 'bg-primary/10 border-primary' : ''
+                          }`}
                       >
                         <span className="font-medium">{minutes} minute{minutes !== 1 ? 's' : ''}</span>
                         {isSelected && <Check className="h-5 w-5 text-primary" />}
@@ -623,7 +620,7 @@ const UnilagDepartmentSubjects = () => {
                 Would you like to proceed with {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''}?
               </p>
               <div className="flex flex-col gap-2">
-                <Button 
+                <Button
                   onClick={async () => {
                     if (limitedQuestionsData && selectedSubject && timeMinutes && pendingQuestions.length > 0) {
                       setShowLimitedQuestionsModal(false);
@@ -637,19 +634,19 @@ const UnilagDepartmentSubjects = () => {
                       setPendingQuestions([]);
                       setStartingExam(false);
                     }
-                  }} 
+                  }}
                   className="w-full"
                 >
                   Proceed with {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''}
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setShowLimitedQuestionsModal(false);
                     setLimitedQuestionsData(null);
                     setPendingQuestions([]);
                     setStartingExam(false);
-                  }} 
+                  }}
                   className="w-full"
                 >
                   Cancel

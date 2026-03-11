@@ -144,7 +144,7 @@ export const getDepartmentSubjects = async (
 export const startExamAttempt = async (
   examId: number,
   data: {
-    subjects?: Array<{ subject: string; question_count: number }>;
+    subjects?: Array<{ subject: string; question_count: number; question_ids?: number[]; questions?: Question[] }>;
     duration_minutes?: number;
   }
 ) => {
@@ -154,7 +154,7 @@ export const startExamAttempt = async (
 
 export const startPracticeSession = async (data: {
   exam_type: string;
-  subjects: Array<{ subject: string; question_count: number }>;
+  subjects: Array<{ subject: string; question_count: number; question_ids?: number[]; questions?: Question[] }>;
   duration_minutes: number;
 }) => {
   const response = await api.post('/practice/start', data);

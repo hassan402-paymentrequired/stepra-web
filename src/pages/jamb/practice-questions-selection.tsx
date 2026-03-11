@@ -14,13 +14,13 @@ import { toast } from 'sonner';
 const JAMBPracticeQuestionsSelection = () => {
   const navigate = useNavigate();
   const { data: user } = useUser();
-  
+
   // Core state
   const [subjects, setSubjects] = useState<string[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [questionCounts, setQuestionCounts] = useState<Record<string, number>>({});
   const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
-  
+
   // UI state  
   const [loading, setLoading] = useState(true);
   const [showQuestionCountModal, setShowQuestionCountModal] = useState(false);
@@ -40,26 +40,26 @@ const JAMBPracticeQuestionsSelection = () => {
     selectedSubjects: string[];
     totalQuestions: number;
   } | null>(null);
-  
+
   // Error state
   const [error, setError] = useState<string | null>(null);
 
   // Memoized values for performance
   const maxQuestionsPerSubject = useMemo(() => hasActiveSubscription ? 100 : 5, [hasActiveSubscription]);
-  const questionCountOptions = useMemo(() => 
-    Array.from({ length: maxQuestionsPerSubject }, (_, i) => i + 1), 
+  const questionCountOptions = useMemo(() =>
+    Array.from({ length: maxQuestionsPerSubject }, (_, i) => i + 1),
     [maxQuestionsPerSubject]
   );
-  
-  const totalQuestions = useMemo(() => 
-    selectedSubjects.reduce((sum, subject) => sum + (questionCounts[subject] || 0), 0), 
+
+  const totalQuestions = useMemo(() =>
+    selectedSubjects.reduce((sum, subject) => sum + (questionCounts[subject] || 0), 0),
     [selectedSubjects, questionCounts]
   );
 
   // Optimized subscription check
   const checkSubscription = useCallback(async () => {
     if (!user) return;
-    
+
     try {
       const response = await getSubscriptionStatus();
       if (response.success && response.data) {
@@ -79,19 +79,19 @@ const JAMBPracticeQuestionsSelection = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await getSubjects('JAMB', 'practice');
-      
+
       if (!response.success) {
         throw new Error('Failed to load subjects');
       }
-      
+
       if (!response.data || response.data.length === 0) {
         setError('No JAMB practice subjects are available at the moment.');
         setSubjects([]);
         return;
       }
-      
+
       setSubjects(response.data);
     } catch (error) {
       console.error('Error loading subjects:', error);
@@ -132,10 +132,10 @@ const JAMBPracticeQuestionsSelection = () => {
         toast.error('You can select a maximum of 4 subjects for JAMB practice.');
         return;
       }
-      
+
       setSelectedSubjects(prev => [...prev, subject]);
       setExpandedSubjects(prev => new Set(prev).add(subject));
-      
+
       // Auto-set default question count for better UX
       const defaultCount = hasActiveSubscription ? 10 : 5;
       setQuestionCounts(prev => ({
@@ -147,7 +147,7 @@ const JAMBPracticeQuestionsSelection = () => {
 
   const toggleAccordion = useCallback((subject: string) => {
     if (!selectedSubjects.includes(subject)) return;
-    
+
     setExpandedSubjects(prev => {
       const newSet = new Set(prev);
       if (newSet.has(subject)) {
@@ -170,7 +170,10 @@ const JAMBPracticeQuestionsSelection = () => {
       // Start practice session using dedicated API endpoint
       const attemptResponse = await startPracticeSession({
         exam_type: 'JAMB',
-        subjects: subjectsData,
+        subjects: subjectsData.map(s => ({
+          ...s,
+          questions: subjectsQuestions[s.subject] || []
+        })),
         duration_minutes: timeMinutesNum,
       });
 
@@ -207,7 +210,7 @@ const JAMBPracticeQuestionsSelection = () => {
 
   const selectQuestionCount = useCallback((count: number) => {
     if (!currentSubjectForQuestionCount) return;
-    
+
     setQuestionCounts(prev => ({
       ...prev,
       [currentSubjectForQuestionCount]: count,
@@ -242,7 +245,7 @@ const JAMBPracticeQuestionsSelection = () => {
 
     try {
       setStartingExam(true);
-      
+
       // Calculate totals upfront
       const timeMinutesNum = selectedSubjects.length * 30;
       const subjectsData = selectedSubjects.map(subject => ({
@@ -301,7 +304,7 @@ const JAMBPracticeQuestionsSelection = () => {
 
       // This function is called after user confirms or if no limited questions
       await proceedWithPracticeSession(subjectsQuestions, subjectsData, timeMinutesNum, selectedSubjects, totalQuestions);
-      
+
     } catch (error) {
       console.error('Error starting exam:', error);
       const errorMessage = getApiErrorMessage(error as AxiosError);
@@ -348,7 +351,7 @@ const JAMBPracticeQuestionsSelection = () => {
             <p className="text-muted-foreground">
               Choose up to 4 subjects and set question count for each ({selectedSubjects.length}/4 selected)
             </p>
-            
+
             {!hasActiveSubscription && (
               <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div className="flex items-start gap-2">
@@ -378,85 +381,82 @@ const JAMBPracticeQuestionsSelection = () => {
               </div>
             ) : (
               subjects.map((subject) => {
-              const isSelected = selectedSubjects.includes(subject);
-              const isExpanded = expandedSubjects.has(subject);
-              const count = questionCounts[subject];
+                const isSelected = selectedSubjects.includes(subject);
+                const isExpanded = expandedSubjects.has(subject);
+                const count = questionCounts[subject];
 
-              return (
-                <div
-                  key={subject}
-                  className={`border rounded-lg overflow-hidden ${
-                    isSelected ? 'border-primary border-2 bg-primary/5' : ''
-                  }`}
-                >
+                return (
                   <div
-                    className="flex items-center justify-between p-4 cursor-pointer"
-                    onClick={() => handleToggleSubject(subject)}
+                    key={subject}
+                    className={`border rounded-lg overflow-hidden ${isSelected ? 'border-primary border-2 bg-primary/5' : ''
+                      }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                          isSelected
-                            ? 'bg-primary border-primary'
-                            : 'border-muted-foreground'
-                        }`}
-                      >
-                        {isSelected && <Check className="h-4 w-4 text-white" />}
+                    <div
+                      className="flex items-center justify-between p-4 cursor-pointer"
+                      onClick={() => handleToggleSubject(subject)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-6 h-6 rounded border-2 flex items-center justify-center ${isSelected
+                              ? 'bg-primary border-primary'
+                              : 'border-muted-foreground'
+                            }`}
+                        >
+                          {isSelected && <Check className="h-4 w-4 text-white" />}
+                        </div>
+                        <div>
+                          <p className="font-semibold">{subject}</p>
+                          {isSelected && count && (
+                            <p className="text-sm text-muted-foreground">
+                              {count} question{count !== 1 ? 's' : ''}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold">{subject}</p>
-                        {isSelected && count && (
-                          <p className="text-sm text-muted-foreground">
-                            {count} question{count !== 1 ? 's' : ''}
-                          </p>
-                        )}
-                      </div>
+                      {isSelected && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleAccordion(subject);
+                          }}
+                        >
+                          {isExpanded ? (
+                            <ChevronUp className="h-5 w-5" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5" />
+                          )}
+                        </button>
+                      )}
                     </div>
-                    {isSelected && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleAccordion(subject);
-                        }}
-                      >
-                        {isExpanded ? (
-                          <ChevronUp className="h-5 w-5" />
-                        ) : (
-                          <ChevronDown className="h-5 w-5" />
-                        )}
-                      </button>
+
+                    {isSelected && isExpanded && (
+                      <div className="border-t p-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Number of questions
+                          </label>
+                          <button
+                            onClick={() => {
+                              setCurrentSubjectForQuestionCount(subject);
+                              setShowQuestionCountModal(true);
+                            }}
+                            className={`w-full border rounded-md p-3 flex items-center justify-between hover:border-primary transition-colors ${count ? 'border-primary bg-primary/5' : 'border-border'
+                              }`}
+                          >
+                            <span className={count ? 'text-foreground font-medium' : 'text-muted-foreground'}>
+                              {count ? `${count} question${count !== 1 ? 's' : ''}` : 'Select number of questions'}
+                            </span>
+                            <ChevronDown className="h-4 w-4" />
+                          </button>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Range: 1-{maxQuestionsPerSubject} questions
+                            {!hasActiveSubscription && ' (Free limit: 5)'}
+                          </p>
+                        </div>
+                      </div>
                     )}
                   </div>
-
-                  {isSelected && isExpanded && (
-                    <div className="border-t p-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Number of questions
-                        </label>
-                        <button
-                          onClick={() => {
-                            setCurrentSubjectForQuestionCount(subject);
-                            setShowQuestionCountModal(true);
-                          }}
-                          className={`w-full border rounded-md p-3 flex items-center justify-between hover:border-primary transition-colors ${
-                            count ? 'border-primary bg-primary/5' : 'border-border'
-                          }`}
-                        >
-                          <span className={count ? 'text-foreground font-medium' : 'text-muted-foreground'}>
-                            {count ? `${count} question${count !== 1 ? 's' : ''}` : 'Select number of questions'}
-                          </span>
-                          <ChevronDown className="h-4 w-4" />
-                        </button>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Range: 1-{maxQuestionsPerSubject} questions
-                          {!hasActiveSubscription && ' (Free limit: 5)'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
+                );
               })
             )}
           </div>
@@ -499,7 +499,7 @@ const JAMBPracticeQuestionsSelection = () => {
               `Start Practice (${selectedSubjects.length} subject${selectedSubjects.length === 1 ? '' : 's'})`
             )}
           </Button>
-          
+
           {selectedSubjects.length > 0 && totalQuestions === 0 && (
             <p className="text-center text-sm text-muted-foreground mt-2">
               Please set question counts for all selected subjects to continue
@@ -511,7 +511,7 @@ const JAMBPracticeQuestionsSelection = () => {
       {/* Question Count Selection Modal */}
       {showQuestionCountModal && currentSubjectForQuestionCount && (
         <div className="fixed inset-0 bg-black/50 flex items-end z-50" onClick={() => setShowQuestionCountModal(false)}>
-          <div 
+          <div
             className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
@@ -520,7 +520,7 @@ const JAMBPracticeQuestionsSelection = () => {
                 <h3 className="font-semibold">Select Number of Questions</h3>
                 <p className="text-sm text-muted-foreground">for {currentSubjectForQuestionCount}</p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowQuestionCountModal(false)}
                 className="text-muted-foreground hover:text-foreground"
               >
@@ -534,9 +534,8 @@ const JAMBPracticeQuestionsSelection = () => {
                   <button
                     key={optionCount}
                     onClick={() => selectQuestionCount(optionCount)}
-                    className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${
-                      isSelected ? 'bg-primary/10 border-primary' : ''
-                    }`}
+                    className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${isSelected ? 'bg-primary/10 border-primary' : ''
+                      }`}
                   >
                     <span className="font-medium">{optionCount} question{optionCount !== 1 ? 's' : ''}</span>
                     {isSelected && <Check className="h-5 w-5 text-primary" />}
@@ -546,8 +545,8 @@ const JAMBPracticeQuestionsSelection = () => {
             </div>
             <div className="p-4 border-t bg-muted/30">
               <p className="text-xs text-muted-foreground">
-                {hasActiveSubscription 
-                  ? 'Premium: Up to 100 questions per subject' 
+                {hasActiveSubscription
+                  ? 'Premium: Up to 100 questions per subject'
                   : 'Free: Up to 5 questions per subject'}
               </p>
             </div>
@@ -582,12 +581,12 @@ const JAMBPracticeQuestionsSelection = () => {
             Would you like to proceed with {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''}?
           </p>
           <div className="flex flex-col gap-2">
-            <Button 
+            <Button
               onClick={async () => {
                 if (pendingPracticeData && limitedQuestionsData) {
                   setShowLimitedQuestionsModal(false);
                   // Update question count for the limited subject
-                  const updatedSubjectsData = pendingPracticeData.subjectsData.map(subj => 
+                  const updatedSubjectsData = pendingPracticeData.subjectsData.map(subj =>
                     subj.subject === limitedQuestionsData.subject
                       ? { ...subj, question_count: limitedQuestionsData.available }
                       : subj
@@ -595,7 +594,7 @@ const JAMBPracticeQuestionsSelection = () => {
                   // Update subjectsQuestions to use only available questions
                   const updatedSubjectsQuestions = { ...pendingPracticeData.subjectsQuestions };
                   if (updatedSubjectsQuestions[limitedQuestionsData.subject]) {
-                    updatedSubjectsQuestions[limitedQuestionsData.subject] = 
+                    updatedSubjectsQuestions[limitedQuestionsData.subject] =
                       updatedSubjectsQuestions[limitedQuestionsData.subject].slice(0, limitedQuestionsData.available);
                   }
                   const updatedTotalQuestions = pendingPracticeData.totalQuestions - limitedQuestionsData.requested + limitedQuestionsData.available;
@@ -609,19 +608,19 @@ const JAMBPracticeQuestionsSelection = () => {
                   setLimitedQuestionsData(null);
                   setPendingPracticeData(null);
                 }
-              }} 
+              }}
               className="w-full"
             >
               Proceed with {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''}
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setShowLimitedQuestionsModal(false);
                 setLimitedQuestionsData(null);
                 setPendingPracticeData(null);
                 setStartingExam(false);
-              }} 
+              }}
               className="w-full"
             >
               Cancel

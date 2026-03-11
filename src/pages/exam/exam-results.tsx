@@ -39,6 +39,7 @@ interface AttemptData {
   time_spent: number;
   completed_at: string;
   subjects?: (string | { subject: string; question_count: number })[];
+  subjects_data?: any[];
   duration_minutes?: number;
 }
 
@@ -148,13 +149,28 @@ const ExamResults = () => {
   // If no questions were answered, show attempt with 0 score
   const hasNoAnswers = results.length === 0;
 
-  const correctCount = hasNoAnswers ? 0 : results.filter((r) => r.is_correct).length;
-  const incorrectCount = hasNoAnswers ? 0 : results.filter((r) => !r.is_correct).length;
+  const correctCount = subjectAnalytics.length > 0
+    ? subjectAnalytics.reduce((sum, s) => sum + s.correct, 0)
+    : (hasNoAnswers ? 0 : results.filter((r) => r.is_correct).length);
+
+  const totalQuestions = attempt.total_questions || (subjectAnalytics.length > 0
+    ? subjectAnalytics.reduce((sum, s) => sum + s.total, 0)
+    : results.length);
+
+  const incorrectCount = totalQuestions - correctCount;
 
   // Extract subject names
   const subjects: string[] = [];
   if (subjectAnalytics.length > 0) {
     subjects.push(...subjectAnalytics.map((a) => a.subject));
+  } else if (attempt.subjects_data) {
+    attempt.subjects_data.forEach((subj: any) => {
+      if (typeof subj === "string") {
+        subjects.push(subj);
+      } else if (subj && typeof subj === "object" && subj.subject) {
+        subjects.push(subj.subject);
+      }
+    });
   } else if (attempt.subjects) {
     attempt.subjects.forEach((subj) => {
       if (typeof subj === "string") {
@@ -278,25 +294,25 @@ const ExamResults = () => {
               </div>
             )}
 
-<div className=" flex flex-col mx-auto gap-3">
-            {!hasNoAnswers && (
-              <Button
-                onClick={() =>
-                  navigate("/exam/corrections", {
-                    state: { attemptId, subjects },
-                  })
-                }
-                variant="outline"
-                className="w-full"
-              >
-                <BookOpen className="h-4 w-4 mr-2" />
-                View Corrections
+            <div className=" flex flex-col mx-auto gap-3">
+              {!hasNoAnswers && (
+                <Button
+                  onClick={() =>
+                    navigate("/exam/corrections", {
+                      state: { attemptId, subjects },
+                    })
+                  }
+                  variant="outline"
+                  className="w-full"
+                >
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  View Corrections
+                </Button>
+              )}
+              <Button onClick={() => navigate("/")} className="w-full ">
+                Back to Home
               </Button>
-            )}
-            <Button onClick={() => navigate("/")} className="w-full ">
-              Back to Home
-            </Button>
-          </div>
+            </div>
           </div>
         </div>
       </div>

@@ -80,18 +80,14 @@ const DLIPracticeSelection = () => {
       subject: selectedSubject,
     }));
 
-    // Prepare subjects data
-    const subjectsData = [
-      {
-        subject: selectedSubject,
-        question_count: Math.min(questionCount, allQuestions.length),
-      },
-    ];
-
     // Start practice session using dedicated API endpoint (no exam record needed)
     const attemptResponse = await startPracticeSession({
       exam_type: "DLI",
-      subjects: subjectsData,
+      subjects: [{
+        subject: selectedSubject,
+        question_count: Math.min(questionCount, allQuestions.length),
+        questions: allQuestions,
+      }],
       duration_minutes: timeMinutes,
     });
 
@@ -261,11 +257,10 @@ const DLIPracticeSelection = () => {
             <button
               onClick={() => setShowSubjectModal(true)}
               disabled={subjects.length === 0}
-              className={`w-full border-2 rounded-md p-3 flex items-center justify-between hover:border-primary transition-colors ${
-                selectedSubject
-                  ? "border-primary"
-                  : "border-border"
-              } ${subjects.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`w-full border-2 rounded-md p-3 flex items-center justify-between hover:border-primary transition-colors ${selectedSubject
+                ? "border-primary"
+                : "border-border"
+                } ${subjects.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               <span
                 className={
@@ -291,11 +286,10 @@ const DLIPracticeSelection = () => {
               </label>
               <button
                 onClick={() => setShowQuestionCountModal(true)}
-                className={`w-full border-2 rounded-md p-3 flex items-center justify-between hover:border-primary transition-colors ${
-                  questionCount && questionCount > 0
-                    ? "border-primary"
-                    : "border-border"
-                }`}
+                className={`w-full border-2 rounded-md p-3 flex items-center justify-between hover:border-primary transition-colors ${questionCount && questionCount > 0
+                  ? "border-primary"
+                  : "border-border"
+                  }`}
               >
                 <span
                   className={
@@ -330,11 +324,10 @@ const DLIPracticeSelection = () => {
               </label>
               <button
                 onClick={() => setShowTimeModal(true)}
-                className={`w-full border-2 rounded-md p-3 flex items-center justify-between hover:border-primary transition-colors ${
-                  timeMinutes && timeMinutes > 0
-                    ? "border-primary"
-                    : "border-border"
-                }`}
+                className={`w-full border-2 rounded-md p-3 flex items-center justify-between hover:border-primary transition-colors ${timeMinutes && timeMinutes > 0
+                  ? "border-primary"
+                  : "border-border"
+                  }`}
               >
                 <span
                   className={
@@ -409,9 +402,8 @@ const DLIPracticeSelection = () => {
                       setTimeMinutes(null);
                       setShowSubjectModal(false);
                     }}
-                    className={`w-full p-4 text-left border-b hover:bg-muted ${
-                      selectedSubject === subject ? "bg-primary/10" : ""
-                    }`}
+                    className={`w-full p-4 text-left border-b hover:bg-muted ${selectedSubject === subject ? "bg-primary/10" : ""
+                      }`}
                   >
                     <div className="flex justify-between items-center">
                       <span>{subject}</span>
@@ -447,9 +439,8 @@ const DLIPracticeSelection = () => {
                     setQuestionCount(count);
                     setShowQuestionCountModal(false);
                   }}
-                  className={`w-full p-4 text-left border-b hover:bg-muted ${
-                    questionCount === count ? "bg-primary/10" : ""
-                  }`}
+                  className={`w-full p-4 text-left border-b hover:bg-muted ${questionCount === count ? "bg-primary/10" : ""
+                    }`}
                 >
                   <div className="flex justify-between items-center">
                     <span>{count}</span>
@@ -480,9 +471,8 @@ const DLIPracticeSelection = () => {
                     setTimeMinutes(minutes);
                     setShowTimeModal(false);
                   }}
-                  className={`w-full p-4 text-left border-b hover:bg-muted ${
-                    timeMinutes === minutes ? "bg-primary/10" : ""
-                  }`}
+                  className={`w-full p-4 text-left border-b hover:bg-muted ${timeMinutes === minutes ? "bg-primary/10" : ""
+                    }`}
                 >
                   <div className="flex justify-between items-center">
                     <span>{minutes}</span>
@@ -523,7 +513,7 @@ const DLIPracticeSelection = () => {
             Would you like to proceed with {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''}?
           </p>
           <div className="flex flex-col gap-2">
-            <Button 
+            <Button
               onClick={async () => {
                 if (limitedQuestionsData && selectedSubject && questionCount && timeMinutes) {
                   setShowLimitedQuestionsModal(false);
@@ -549,18 +539,18 @@ const DLIPracticeSelection = () => {
                   setLimitedQuestionsData(null);
                   setStartingExam(false);
                 }
-              }} 
+              }}
               className="w-full"
             >
               Proceed with {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''}
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setShowLimitedQuestionsModal(false);
                 setLimitedQuestionsData(null);
                 setStartingExam(false);
-              }} 
+              }}
               className="w-full"
             >
               Cancel

@@ -25,6 +25,7 @@ interface QuestionResult {
     image?: string | null;
     image_url?: string;
     image_path?: string;
+    subject?: string;
     /** All answer options (from API) for multiple_choice / true_false */
     answers?: { id: number; answer_text: string; order: string; is_correct: boolean }[];
   };
@@ -85,7 +86,7 @@ const ExamCorrections = () => {
         // Note: The API should ideally include all answers in the response
         // For now, we'll need to fetch them separately or the API needs to be updated
         const questionsMap: Record<number, QuestionWithAnswers> = {};
-        
+
         // Group results by subject
         const grouped: Record<string, QuestionResult[]> = {};
         const subjectNames: string[] = [];
@@ -107,42 +108,60 @@ const ExamCorrections = () => {
             grouped[subject] = [];
           });
 
-          let questionIndex = 0;
-          subjectNames.forEach((subject) => {
-            const subjectData = attemptSubjects.find((s: any) => {
-              if (typeof s === "string") return s === subject;
-              return s.subject === subject;
-            });
-            const questionCount =
-              typeof subjectData === "object" && subjectData?.question_count
-                ? subjectData.question_count
-                : Math.floor(allResults.length / subjectNames.length);
+          // Accurate grouping using question.subject metadata from backend
+          allResults.forEach((result: QuestionResult) => {
+            const qSubject = result.question.subject?.trim();
+            if (qSubject) {
+              // Exact match or Case-insensitive match or Trimmed match
+              const matchedSubject = subjectNames.find(s => s.toLowerCase() === qSubject.toLowerCase());
 
-            for (
-              let i = 0;
-              i < questionCount && questionIndex < allResults.length;
-              i++
-            ) {
-              grouped[subject].push(allResults[questionIndex]);
-              questionIndex++;
+              if (matchedSubject) {
+                grouped[matchedSubject].push(result);
+              } else {
+                // If subject not exactly in metadata list, add to existing or create new
+                const existingGroup = Object.keys(grouped).find(k => k.toLowerCase() === qSubject.toLowerCase());
+                if (existingGroup) {
+                  grouped[existingGroup].push(result);
+                } else {
+                  grouped[qSubject] = [result];
+                  subjectNames.push(qSubject);
+                }
+              }
+            } else {
+              // Fallback for missing subject info - use the first available subject name or "General"
+              const fallbackSubject = subjectNames[0] || "General";
+              if (!grouped[fallbackSubject]) grouped[fallbackSubject] = [];
+              if (!subjectNames.includes(fallbackSubject)) subjectNames.push(fallbackSubject);
+              grouped[fallbackSubject].push(result);
             }
           });
-
-          while (questionIndex < allResults.length && subjectNames.length > 0) {
-            const lastSubject = subjectNames[subjectNames.length - 1];
-            grouped[lastSubject].push(allResults[questionIndex]);
-            questionIndex++;
-          }
         } else {
-          grouped["All Questions"] = allResults;
-          subjectNames.push("All Questions");
+          // If no subject metadata at all, derive from results
+          const derivedSubjects = new Set<string>();
+          allResults.forEach((r: QuestionResult) => {
+            if (r.question.subject) derivedSubjects.add(r.question.subject.trim());
+          });
+
+          const subjectsArray = Array.from(derivedSubjects).filter(s => !!s);
+          if (subjectsArray.length > 0) {
+            subjectsArray.forEach(s => grouped[s] = []);
+            allResults.forEach((r: QuestionResult) => {
+              const qSub = r.question.subject?.trim() || subjectsArray[0];
+              if (!grouped[qSub]) grouped[qSub] = [];
+              grouped[qSub].push(r);
+            });
+            subjectNames.push(...subjectsArray);
+          } else {
+            grouped["General"] = allResults;
+            subjectNames.push("General");
+          }
         }
 
         // Process results and build questions map
         allResults.forEach((result: QuestionResult) => {
           const questionId = result.question.id;
           const questionType = result.question.question_type || 'multiple_choice';
-          
+
           if (!questionsMap[questionId]) {
             let answers: { id: number; answer_text: string; order: string }[] = [];
 
@@ -168,7 +187,7 @@ const ExamCorrections = () => {
                   });
                 }
                 if (result.user_answer && result.user_answer.order &&
-                    result.user_answer.id !== result.correct_answer?.id) {
+                  result.user_answer.id !== result.correct_answer?.id) {
                   answerMap.set(result.user_answer.order, {
                     id: result.user_answer.id || 0,
                     answer_text: result.user_answer.answer_text,
@@ -197,12 +216,45 @@ const ExamCorrections = () => {
           }
         });
 
-        setResultsBySubject(grouped);
-        setSubjectList(subjectNames);
+        const validGroups: Record<string, QuestionResult[]> = {};
+        const validSubjectNames: string[] = [];
+
+        Object.keys(grouped).forEach(subject => {
+          if (grouped[subject].length > 0) {
+            validGroups[subject] = grouped[subject];
+            validSubjectNames.push(subject);
+          }
+        });
+
+        // Use attemptSubjects order if possible, but only for valid subjects
+        const sortedSubjectNames: string[] = [];
+        // Extract original names from metadata
+        const originalNames: string[] = [];
+        if (Array.isArray(attemptSubjects)) {
+          attemptSubjects.forEach(s => {
+            const name = typeof s === "string" ? s : s.subject;
+            if (name) originalNames.push(name);
+          });
+        }
+
+        originalNames.forEach(name => {
+          const matched = validSubjectNames.find(v => v.toLowerCase() === name.toLowerCase());
+          if (matched && !sortedSubjectNames.includes(matched)) {
+            sortedSubjectNames.push(matched);
+          }
+        });
+
+        // Add any remaining subjects not in metadata
+        validSubjectNames.forEach(v => {
+          if (!sortedSubjectNames.includes(v)) sortedSubjectNames.push(v);
+        });
+
+        setResultsBySubject(validGroups);
+        setSubjectList(sortedSubjectNames);
         setQuestionsWithAnswers(questionsMap);
 
-        if (subjectNames.length > 0) {
-          setCurrentSubject(subjectNames[0]);
+        if (sortedSubjectNames.length > 0) {
+          setCurrentSubject(sortedSubjectNames[0]);
         }
       }
     } catch (error) {
@@ -270,12 +322,12 @@ const ExamCorrections = () => {
       ? currentQuestion.image
       : `${baseUrl}/storage/${currentQuestion.image}`
     : currentQuestion?.image_url
-    ? currentQuestion.image_url.startsWith("http")
-      ? currentQuestion.image_url
-      : `${baseUrl}${currentQuestion.image_url}`
-    : currentQuestion?.image_path
-    ? `${baseUrl}/storage/${currentQuestion.image_path}`
-    : null;
+      ? currentQuestion.image_url.startsWith("http")
+        ? currentQuestion.image_url
+        : `${baseUrl}${currentQuestion.image_url}`
+      : currentQuestion?.image_path
+        ? `${baseUrl}/storage/${currentQuestion.image_path}`
+        : null;
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background">
@@ -324,9 +376,8 @@ const ExamCorrections = () => {
                   <button
                     key={subject}
                     onClick={() => handleSelectSubject(subject)}
-                    className={`w-full p-4 border rounded-lg mb-3 text-left ${
-                      isCurrent ? "border-primary bg-primary/10" : ""
-                    }`}
+                    className={`w-full p-4 border rounded-lg mb-3 text-left ${isCurrent ? "border-primary bg-primary/10" : ""
+                      }`}
                   >
                     <div className="flex justify-between items-center">
                       <div>
@@ -377,16 +428,14 @@ const ExamCorrections = () => {
               {currentQuestion.question_type === 'text_input' || currentQuestion.question_type === 'numeric_input' ? (
                 // Text/Numeric Input Display
                 <div className="space-y-4">
-                  <div className={`p-4 rounded-lg border-2 ${
-                    currentResult.is_correct 
-                      ? 'border-green-500 bg-green-50' 
-                      : 'border-red-500 bg-red-50'
-                  }`}>
+                  <div className={`p-4 rounded-lg border-2 ${currentResult.is_correct
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-red-500 bg-red-50'
+                    }`}>
                     <div className="mb-3">
                       <span className="text-sm font-semibold text-muted-foreground">Your Answer:</span>
-                      <p className={`mt-1 text-lg ${
-                        currentResult.is_correct ? 'text-green-700' : 'text-red-700'
-                      }`}>
+                      <p className={`mt-1 text-lg ${currentResult.is_correct ? 'text-green-700' : 'text-red-700'
+                        }`}>
                         {currentResult.user_answer?.answer_text || 'No answer provided'}
                       </p>
                     </div>
@@ -410,15 +459,14 @@ const ExamCorrections = () => {
                     return (
                       <div
                         key={answer.id}
-                        className={`w-full p-4 rounded-lg border-2 flex items-center gap-3 transition-all ${
-                          isCorrect && isUserAnswer
-                            ? "border-green-500 bg-green-50 dark:bg-green-950/30"
-                            : isCorrect
+                        className={`w-full p-4 rounded-lg border-2 flex items-center gap-3 transition-all ${isCorrect && isUserAnswer
+                          ? "border-green-500 bg-green-50 dark:bg-green-950/30"
+                          : isCorrect
                             ? "border-green-500 bg-green-50 dark:bg-green-950/30"
                             : isUserAnswer
-                            ? "border-red-500 bg-red-50 dark:bg-red-950/30"
-                            : "border-border bg-muted/30"
-                        }`}
+                              ? "border-red-500 bg-red-50 dark:bg-red-950/30"
+                              : "border-border bg-muted/30"
+                          }`}
                       >
                         {answer.order && (
                           <span className="font-semibold min-w-[2rem] text-muted-foreground">
@@ -491,13 +539,12 @@ const ExamCorrections = () => {
                 <button
                   key={result.question.id}
                   onClick={() => goToQuestion(index)}
-                  className={`w-10 h-10 rounded border-2 flex items-center justify-center text-sm font-medium ${
-                    isCurrent
-                      ? "bg-primary border-primary text-white"
-                      : isCorrect
+                  className={`w-10 h-10 rounded border-2 flex items-center justify-center text-sm font-medium ${isCurrent
+                    ? "bg-primary border-primary text-white"
+                    : isCorrect
                       ? "bg-green-500 border-green-500 text-white"
                       : "bg-red-500 border-red-500 text-white"
-                  }`}
+                    }`}
                 >
                   {index + 1}
                 </button>

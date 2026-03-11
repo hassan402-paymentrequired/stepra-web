@@ -252,7 +252,10 @@ const JAMBPastQuestionsSelection = () => {
       // Start exam attempt
       const timeMinutesNum = selectedSubjects.length * 30;
       const attemptResponse = await startExamAttempt(firstExamId, {
-        subjects: subjectsData,
+        subjects: subjectsData.map(s => ({
+          ...s,
+          questions: subjectsQuestions[s.subject] || []
+        })),
         duration_minutes: timeMinutesNum,
       });
 
@@ -325,9 +328,8 @@ const JAMBPastQuestionsSelection = () => {
               return (
                 <div
                   key={subject}
-                  className={`border rounded-lg overflow-hidden ${
-                    isSelected ? 'border-primary border-2 bg-primary/5' : ''
-                  }`}
+                  className={`border rounded-lg overflow-hidden ${isSelected ? 'border-primary border-2 bg-primary/5' : ''
+                    }`}
                 >
                   <div
                     className="flex items-center justify-between p-4 cursor-pointer"
@@ -335,11 +337,10 @@ const JAMBPastQuestionsSelection = () => {
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                          isSelected
+                        className={`w-6 h-6 rounded border-2 flex items-center justify-center ${isSelected
                             ? 'bg-primary border-primary'
                             : 'border-muted-foreground'
-                        }`}
+                          }`}
                       >
                         {isSelected && <Check className="h-4 w-4 text-white" />}
                       </div>
@@ -465,11 +466,10 @@ const JAMBPastQuestionsSelection = () => {
                   <button
                     key={year}
                     onClick={() => selectYear(year)}
-                    className={`w-full p-4 text-left border-b hover:bg-muted ${
-                      subjectSelections[currentSubjectForYear]?.year === year
+                    className={`w-full p-4 text-left border-b hover:bg-muted ${subjectSelections[currentSubjectForYear]?.year === year
                         ? 'bg-primary/10'
                         : ''
-                    }`}
+                      }`}
                   >
                     {year}
                   </button>
@@ -497,11 +497,10 @@ const JAMBPastQuestionsSelection = () => {
                 <button
                   key={count}
                   onClick={() => selectQuestionCount(count)}
-                  className={`w-full p-4 text-left border-b hover:bg-muted ${
-                    subjectSelections[currentSubjectForQuestionCount || '']?.questionCount === count
+                  className={`w-full p-4 text-left border-b hover:bg-muted ${subjectSelections[currentSubjectForQuestionCount || '']?.questionCount === count
                       ? 'bg-primary/10'
                       : ''
-                  }`}
+                    }`}
                 >
                   {count}
                 </button>
