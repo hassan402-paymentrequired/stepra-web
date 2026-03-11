@@ -371,7 +371,7 @@ const ExamCorrections = () => {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="overflow-y-auto p-4">
+            <div className="overflow-y-auto p-4 flex flex-col gap-y-3">
               {subjectList.map((subject) => {
                 const isCurrent = subject === currentSubject;
                 return (
