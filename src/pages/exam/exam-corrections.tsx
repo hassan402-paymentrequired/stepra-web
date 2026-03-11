@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  ChevronUp,
   Lightbulb,
   X,
   Check,
@@ -64,6 +65,7 @@ const ExamCorrections = () => {
   const [currentSubject, setCurrentSubject] = useState<string>("");
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showSubjectModal, setShowSubjectModal] = useState(false);
+  const [isFooterExpanded, setIsFooterExpanded] = useState(false);
 
   useEffect(() => {
     if (attemptId) {
@@ -527,29 +529,56 @@ const ExamCorrections = () => {
       </div>
 
       {/* Navigation Footer */}
-      <div className="border-t bg-card p-4">
+      <div className="border-t bg-card p-4 relative z-10">
         <div className="max-w-4xl mx-auto">
-          {/* Question Grid */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {currentQuestions.map((result, index) => {
-              const isCurrent = index === currentQuestionIndex;
-              const isCorrect = result.is_correct;
+          {/* Collapse/Expand Toggle */}
+          <div className="flex justify-center -mt-4 mb-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-4 rounded-t-none rounded-b-lg bg-card border border-t-0 border-border/50 text-muted-foreground hover:text-primary transition-all shadow-sm flex items-center gap-1"
+              onClick={() => setIsFooterExpanded(!isFooterExpanded)}
+            >
+              {isFooterExpanded ? (
+                <>
+                  <ChevronDown className="h-3 w-3" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Hide Questions</span>
+                </>
+              ) : (
+                <>
+                  <ChevronUp className="h-3 w-3" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Show Questions</span>
+                </>
+              )}
+            </Button>
+          </div>
 
-              return (
-                <button
-                  key={result.question.id}
-                  onClick={() => goToQuestion(index)}
-                  className={`w-10 h-10 rounded border-2 flex items-center justify-center text-sm font-medium ${isCurrent
-                    ? "bg-primary border-primary text-white"
-                    : isCorrect
-                      ? "bg-green-500 border-green-500 text-white"
-                      : "bg-red-500 border-red-500 text-white"
-                    }`}
-                >
-                  {index + 1}
-                </button>
-              );
-            })}
+          {/* Question Grid (Collapsible) */}
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${isFooterExpanded ? "max-h-60 mb-4 opacity-100" : "max-h-0 opacity-0"
+              }`}
+          >
+            <div className="flex flex-wrap gap-2 py-1">
+              {currentQuestions.map((result, index) => {
+                const isCurrent = index === currentQuestionIndex;
+                const isCorrect = result.is_correct;
+
+                return (
+                  <button
+                    key={result.question.id}
+                    onClick={() => goToQuestion(index)}
+                    className={`w-10 h-10 rounded border-2 flex items-center justify-center text-sm font-medium ${isCurrent
+                      ? "bg-primary border-primary text-white"
+                      : isCorrect
+                        ? "bg-green-500 border-green-500 text-white"
+                        : "bg-red-500 border-red-500 text-white"
+                      }`}
+                  >
+                    {index + 1}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Navigation Buttons */}
