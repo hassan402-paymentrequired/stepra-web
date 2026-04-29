@@ -31,7 +31,7 @@ const VerifyEmail = () => {
   }
 
   if (user?.email_verified_at) {
-    navigate('/');
+    navigate('/dashboard');
   }
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -51,7 +51,7 @@ const VerifyEmail = () => {
       toast.success('Email verified successfully');
 
       await refetchUser();
-      navigate('/');
+      navigate('/dashboard');
     } catch (error: any) {
       const errorMessage = getApiErrorMessage(error);
       toast.error(errorMessage);

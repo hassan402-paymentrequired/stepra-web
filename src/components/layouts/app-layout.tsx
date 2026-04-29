@@ -141,10 +141,9 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
     const items: Array<{ title: string; href?: string }> = [];
 
     // Always start with Home
-    items.push({ title: "Home", href: "/" });
+    items.push({ title: "Home", href: "/dashboard" });
 
-    // Handle root path
-    if (pathname === "/") {
+    if (pathname === "/dashboard") {
       items.push({ title: "Dashboard" });
       return items;
     }
@@ -234,7 +233,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
           className="flex items-center gap-6 lg:gap-8"
           style={{ display: "flex", alignItems: "center" }}
         >
-          <Logo to="/" variant="logo" height={24} width={24} />
+          <Logo to="/dashboard" variant="logo" height={24} width={24} />
         </div>
         {user && (
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -448,7 +447,12 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
         </div>
       </Content>
       <Footer style={{ textAlign: "center" }}>
-        Stepra ©{new Date().getFullYear()} All rights reserved.
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+          <span>Stepra ©{new Date().getFullYear()} All rights reserved.</span>
+          <Link to="/privacy-policy" className="hover:text-primary transition-colors">
+            Privacy Policy
+          </Link>
+        </div>
       </Footer>
     </Layout>
   );

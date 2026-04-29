@@ -71,7 +71,7 @@ const Leaderboard = () => {
                         variant="ghost"
                         size="sm"
                         className="w-fit -ml-2 h-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => navigate("/")}
+                        onClick={() => navigate("/dashboard")}
                     >
                         <ArrowLeft className="h-4 w-4 mr-1.5" />
                         Back to Home

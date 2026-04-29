@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { RouterProvider } from 'react-router';
 import AppProvider from './provider';
 import router from './router';
@@ -7,7 +8,15 @@ import { WhatsAppFloat } from '@/components/whatsapp-float';
 function App() {
   return (
     <AppProvider>
-      <RouterProvider router={router} />
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" />
+          </div>
+        }
+      >
+        <RouterProvider router={router} />
+      </Suspense>
       <Toaster position="top-right" richColors closeButton />
       <WhatsAppFloat />
     </AppProvider>

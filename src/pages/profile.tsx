@@ -297,7 +297,7 @@ const Profile = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/dashboard")}
               size="lg"
             >
               Cancel

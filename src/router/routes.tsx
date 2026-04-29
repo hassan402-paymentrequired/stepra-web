@@ -1,5 +1,7 @@
 import type { RouteObject } from 'react-router';
 import {
+  Landing,
+  PrivacyPolicy,
   Home,
   Login,
   Register,
@@ -28,7 +30,11 @@ import ProtectedRoute from './protected-route';
 const routesObject: RouteObject[] = [
   {
     path: '/',
-    element: <Home />,
+    element: <Landing />,
+  },
+  {
+    path: '/privacy-policy',
+    element: <PrivacyPolicy />,
   },
   {
     path: '/authenticate',
@@ -60,6 +66,10 @@ const routesObject: RouteObject[] = [
     path: '/',
     element: <ProtectedRoute />,
     children: [
+      {
+        path: 'dashboard',
+        element: <Home />,
+      },
       {
         path: 'jamb/mode-selection',
         element: <JAMBModeSelection />,

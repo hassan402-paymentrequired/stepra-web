@@ -139,7 +139,7 @@ const ExamResults = () => {
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <p className="text-destructive mb-4">No results found</p>
-            <Button onClick={() => navigate("/")}>Go Back</Button>
+            <Button onClick={() => navigate("/dashboard")}>Go Back</Button>
           </div>
         </div>
       </AppLayout>
@@ -309,7 +309,7 @@ const ExamResults = () => {
                   View Corrections
                 </Button>
               )}
-              <Button onClick={() => navigate("/")} className="w-full ">
+              <Button onClick={() => navigate("/dashboard")} className="w-full ">
                 Back to Home
               </Button>
             </div>

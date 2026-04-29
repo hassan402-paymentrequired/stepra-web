@@ -6,7 +6,7 @@ const GuestRoute: FC = () => {
   const { data: user, isLoading } = useUser();
 
   if (!isLoading && !!user) {
-    return <Navigate to="/" replace={true} />;
+    return <Navigate to="/dashboard" replace={true} />;
   }
 
   return <Outlet />;

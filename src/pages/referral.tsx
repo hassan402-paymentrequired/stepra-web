@@ -161,7 +161,7 @@ const Referral = () => {
             <p className="text-destructive mb-4">
               Failed to load referral data
             </p>
-            <Button onClick={() => navigate("/")}>Go Back</Button>
+            <Button onClick={() => navigate("/dashboard")}>Go Back</Button>
           </div>
         </div>
       </AppLayout>

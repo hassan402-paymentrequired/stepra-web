@@ -971,7 +971,7 @@ const ExamScreen = () => {
           <p className="text-destructive mb-4">
             Invalid exam data. Please try again.
           </p>
-          <Button onClick={() => navigate("/")}>Go Back</Button>
+          <Button onClick={() => navigate("/dashboard")}>Go Back</Button>
         </div>
       </div>
     );

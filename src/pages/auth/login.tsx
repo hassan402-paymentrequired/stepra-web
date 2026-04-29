@@ -54,7 +54,8 @@ const Login = () => {
         });
         return;
       }
-    
+
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       const error = err as AxiosError<{ errors?: Record<string, string[]>; message?: string }>;
       const errorMessage = getApiErrorMessage(error);
