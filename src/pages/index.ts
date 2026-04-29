@@ -2,6 +2,7 @@ import { lazy } from 'react';
 
 export const Landing = lazy(() => import('./landing'));
 export const PrivacyPolicy = lazy(() => import('./privacy-policy'));
+export const DeleteAccount = lazy(() => import('./delete-account'));
 export const Home = lazy(() => import('./home'));
 export const Login = lazy(() => import('./auth/login'));
 export const Register = lazy(() => import('./auth/register'));

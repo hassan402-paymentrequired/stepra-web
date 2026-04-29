@@ -2,6 +2,7 @@ import type { RouteObject } from 'react-router';
 import {
   Landing,
   PrivacyPolicy,
+  DeleteAccount,
   Home,
   Login,
   Register,
@@ -35,6 +36,10 @@ const routesObject: RouteObject[] = [
   {
     path: '/privacy-policy',
     element: <PrivacyPolicy />,
+  },
+  {
+    path: '/delete-account',
+    element: <DeleteAccount />,
   },
   {
     path: '/authenticate',

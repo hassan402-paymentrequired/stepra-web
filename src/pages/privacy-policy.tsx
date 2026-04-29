@@ -71,7 +71,14 @@ const PrivacyPolicy = () => {
           <li>You may review or update profile information inside the app or website where available.</li>
           <li>You may opt out of non-essential notifications where we offer preferences.</li>
           <li>
-            To exercise rights such as deletion or data export where applicable under local law, contact us using the email
+            To request deletion of your account and associated data, follow the instructions on our{' '}
+            <Link to="/delete-account" className="text-primary underline-offset-4 hover:underline">
+              account and data deletion
+            </Link>{' '}
+            page.
+          </li>
+          <li>
+            For other privacy requests (including data export where applicable under local law), contact us using the email
             below.
           </li>
         </ul>

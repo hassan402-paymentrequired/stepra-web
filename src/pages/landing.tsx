@@ -83,9 +83,14 @@ const Landing = () => {
       <footer className="border-t border-border/60 px-6 py-8 mt-auto">
         <div className="max-w-6xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <span>© {new Date().getFullYear()} Stepra. All rights reserved.</span>
-          <Link to="/privacy-policy" className="hover:text-foreground transition-colors">
-            Privacy Policy
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            <Link to="/privacy-policy" className="hover:text-foreground transition-colors">
+              Privacy Policy
+            </Link>
+            <Link to="/delete-account" className="hover:text-foreground transition-colors">
+              Delete account &amp; data
+            </Link>
+          </div>
         </div>
       </footer>
     </div>

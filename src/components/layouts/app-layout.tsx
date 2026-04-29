@@ -452,6 +452,9 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
           <Link to="/privacy-policy" className="hover:text-primary transition-colors">
             Privacy Policy
           </Link>
+          <Link to="/delete-account" className="hover:text-primary transition-colors">
+            Delete account &amp; data
+          </Link>
         </div>
       </Footer>
     </Layout>
