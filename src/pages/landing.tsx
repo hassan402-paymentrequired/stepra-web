@@ -32,7 +32,7 @@ const Landing = () => {
             Practice smarter. Track progress. Aim higher.
           </h1>
           <p className="text-muted-foreground text-lg leading-relaxed">
-            Stepra helps you prepare for JAMB and more with past questions,
+            Stepra helps you prepare for EXAM. and more with past questions,
             timed practice, and performance insights—all in one place.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
@@ -45,39 +45,7 @@ const Landing = () => {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 mt-20 max-w-4xl mx-auto">
-          <div className="rounded-xl border border-border bg-card p-6 text-left">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-              <BookOpen className="h-5 w-5 text-primary" />
-            </div>
-            <h2 className="font-semibold text-foreground mb-2">Past & practice questions</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Work through structured sets with instant feedback after each session.
-            </p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-6 text-left">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-              <GraduationCap className="h-5 w-5 text-primary" />
-            </div>
-            <h2 className="font-semibold text-foreground mb-2">Built for Nigerian exams</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Flows tuned for typical exam bundles and departmental practice paths.
-            </p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-6 text-left">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-              <Shield className="h-5 w-5 text-primary" />
-            </div>
-            <h2 className="font-semibold text-foreground mb-2">Privacy-conscious</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Read how we handle your data on our{' '}
-              <Link to="/privacy-policy" className="text-primary underline-offset-4 hover:underline">
-                privacy policy
-              </Link>
-              .
-            </p>
-          </div>
-        </div>
+  
       </main>
 
       <footer className="border-t border-border/60 px-6 py-8 mt-auto">

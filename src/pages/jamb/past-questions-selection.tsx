@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import AppLayout from '@/components/layouts/app-layout';
 import { Button } from '@/components/ui';
-import { getSubjects, getAvailableYears, getExams, getExamQuestions, startExamAttempt } from '@/apis/exam';
-import { useUser } from '@/lib/auth';
-import { getSubscriptionStatus } from '@/apis/subscription';
+import { getSubjects, getAvailableYears, startPracticeSession } from '@/apis/exam';
+import { useExamSelection } from '@/contexts/ExamSelectionContext';
+import { useSubscriptionGate } from '@/hooks/useSubscriptionGate';
 import { Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils';
 import type { AxiosError } from 'axios';
+import { toast } from 'sonner';
 
 interface SubjectSelection {
   subject: string;
@@ -17,7 +18,9 @@ interface SubjectSelection {
 
 const JAMBPastQuestionsSelection = () => {
   const navigate = useNavigate();
-  const { data: user } = useUser();
+  const { selection, setQuestionCount, setTimeMinutes } = useExamSelection();
+  const examType = selection.examTypeSlug || selection.examType?.toString() || 'JAMB';
+  const examTypeLabel = selection.examTypeName || 'JAMB';
   const [subjects, setSubjects] = useState<string[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [subjectSelections, setSubjectSelections] = useState<Record<string, SubjectSelection>>({});
@@ -30,33 +33,8 @@ const JAMBPastQuestionsSelection = () => {
   const [currentSubjectForYear, setCurrentSubjectForYear] = useState<string | null>(null);
   const [currentSubjectForQuestionCount, setCurrentSubjectForQuestionCount] = useState<string | null>(null);
   const [startingExam, setStartingExam] = useState(false);
-  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
-
-  const maxQuestionsPerSubject = hasActiveSubscription ? 100 : 5;
+  const { hasActiveSubscription, maxQuestionsPerSubject } = useSubscriptionGate();
   const questionCountOptions = Array.from({ length: maxQuestionsPerSubject }, (_, i) => i + 1);
-
-  // Fetch subscription status from API for accurate check
-  useEffect(() => {
-    const checkSubscription = async () => {
-      try {
-        const response = await getSubscriptionStatus();
-        if (response.success && response.data) {
-          setHasActiveSubscription(response.data.has_active_subscription || false);
-        }
-      } catch (error) {
-        // Fallback to user data check if API fails
-        const userHasActive =
-          user?.subscription_status === 'active' ||
-          (user?.subscription_expires_at &&
-            new Date(user.subscription_expires_at) > new Date());
-        setHasActiveSubscription(userHasActive || false);
-      }
-    };
-
-    if (user) {
-      checkSubscription();
-    }
-  }, [user]);
 
   useEffect(() => {
     loadSubjects();
@@ -65,7 +43,7 @@ const JAMBPastQuestionsSelection = () => {
   const loadSubjects = async () => {
     try {
       setLoading(true);
-      const response = await getSubjects('JAMB', 'past_question');
+      const response = await getSubjects(examType, 'past_question');
       if (response.success) {
         setSubjects(response.data);
       }
@@ -81,7 +59,7 @@ const JAMBPastQuestionsSelection = () => {
 
     try {
       setLoadingYears(true);
-      const response = await getAvailableYears('JAMB', [subject]);
+      const response = await getAvailableYears(examType, [subject]);
       if (response.success) {
         setYearsBySubject((prev) => ({
           ...prev,
@@ -122,7 +100,7 @@ const JAMBPastQuestionsSelection = () => {
         }));
         loadYearsForSubject(subject);
       } else {
-        alert('You can select a maximum of 4 subjects for JAMB.');
+        toast.warning('You can select a maximum of 4 subjects for JAMB.');
       }
     }
   };
@@ -171,118 +149,77 @@ const JAMBPastQuestionsSelection = () => {
 
   const handleStartExam = async () => {
     if (selectedSubjects.length === 0) {
-      alert('Please select at least one subject to continue.');
+      toast.warning('Please select at least one subject to continue.');
       return;
     }
 
-    // Validate all subjects have question counts and years
     const missingData: string[] = [];
     selectedSubjects.forEach((subject) => {
-      const selection = subjectSelections[subject];
-      if (!selection || !selection.questionCount || selection.questionCount < 1) {
+      const subjectSelection = subjectSelections[subject];
+      if (!subjectSelection || !subjectSelection.questionCount || subjectSelection.questionCount < 1) {
         missingData.push(`${subject} - question count`);
       }
-      if (!selection || !selection.year) {
+      if (!subjectSelection || !subjectSelection.year) {
         missingData.push(`${subject} - year`);
       }
     });
 
     if (missingData.length > 0) {
-      alert(`Please complete the following:\n${missingData.join('\n')}`);
+      toast.warning(`Please complete the following:\n${missingData.join('\n')}`);
       return;
     }
 
     try {
       setStartingExam(true);
 
-      // Fetch questions for all subjects
-      const subjectsQuestions: Record<string, any[]> = {};
-      let firstExamId: number | null = null;
+      const subjectsData = selectedSubjects.map((subject) => ({
+        subject,
+        year: subjectSelections[subject].year!,
+        question_count: subjectSelections[subject].questionCount,
+      }));
 
-      for (const subject of selectedSubjects) {
-        const subjectSelection = subjectSelections[subject];
+      const timeMinutesNum = selectedSubjects.length * 45;
 
-        const examResponse = await getExams({
-          exam_type: 'JAMB',
-          subject: subject,
-          year: subjectSelection.year!,
-        });
-
-        if (!examResponse.success || examResponse.data.length === 0) {
-          alert(`No past questions found for ${subject} in ${subjectSelection.year}. Please try a different year.`);
-          return;
-        }
-
-        const exam = examResponse.data[0];
-        if (!firstExamId) {
-          firstExamId = exam.id;
-        }
-
-        // Get questions for this subject's exam
-        const questionsResponse = await getExamQuestions(exam.id);
-
-        if (!questionsResponse.success) {
-          alert(`Failed to load questions for ${subject}. Please try again.`);
-          return;
-        }
-
-        const allQuestions = questionsResponse.data.questions || [];
-        const limitedQuestions = allQuestions.slice(0, subjectSelection.questionCount);
-
-        subjectsQuestions[subject] = limitedQuestions.map((q: any) => ({
-          ...q,
-          subject: subject,
-        }));
-      }
-
-      if (!firstExamId) {
-        alert('Failed to start exam. Please try again.');
-        return;
-      }
-
-      // Prepare subjects data
-      const subjectsData = selectedSubjects.map((subject) => {
-        const subjectSelection = subjectSelections[subject];
-        return {
-          subject: subject,
-          question_count: subjectSelection.questionCount,
-        };
-      });
-
-      // Start exam attempt
-      const timeMinutesNum = selectedSubjects.length * 30;
-      const attemptResponse = await startExamAttempt(firstExamId, {
-        subjects: subjectsData.map(s => ({
-          ...s,
-          questions: subjectsQuestions[s.subject] || []
-        })),
+      const attemptResponse = await startPracticeSession({
+        exam_type: examType,
+        subjects: subjectsData,
         duration_minutes: timeMinutesNum,
       });
 
-      if (!attemptResponse.success) {
-        alert('Failed to start exam. Please try again.');
+      if (!attemptResponse.success || !attemptResponse.data?.attempt) {
+        toast.error(attemptResponse.message || 'Failed to start exam. Please try again.');
         return;
       }
 
-      // Navigate to exam screen
+      const { attempt, questions: subjectsQuestions } = attemptResponse.data;
+
+      selectedSubjects.forEach((subject) => {
+        const qCount = subjectsQuestions[subject]?.length || 0;
+        setQuestionCount(subject, qCount);
+      });
+      setTimeMinutes(timeMinutesNum);
+
+      const totalQ = Object.values(subjectsQuestions).flat().length;
+
       navigate('/exam/screen', {
         state: {
-          attemptId: attemptResponse.data.attempt.id,
-          examId: firstExamId,
-          subjectsQuestions: subjectsQuestions,
+          attemptId: attempt.id,
+          examId: attempt.exam_id || 0,
+          subjectsQuestions,
           exam: {
-            id: firstExamId,
-            title: `JAMB ${selectedSubjects.join(', ')} Past Questions`,
+            id: attempt.exam_id || 0,
+            title: `${examTypeLabel} Past Questions`,
             duration: timeMinutesNum,
-            total_questions: totalQuestions,
+            total_questions: totalQ,
           },
           timeMinutes: timeMinutesNum,
           subjects: selectedSubjects,
+          isPractice: false,
         },
       });
     } catch (error) {
       const errorMessage = getApiErrorMessage(error as AxiosError);
-      alert(`Error: ${errorMessage}`);
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setStartingExam(false);
     }

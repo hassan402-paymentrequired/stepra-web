@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import AppLayout from "@/components/layouts/app-layout";
-import { getLeaderboard, type LeaderboardUser } from "@/apis/leaderboard";
+import type { LeaderboardUser } from "@/apis/leaderboard";
+import { useLeaderboard } from "@/hooks/queries/useLeaderboard";
 import {
     Trophy,
     Medal,
@@ -20,35 +21,25 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+type LeaderboardPeriod = "weekly" | "monthly" | "all_time";
+type LeaderboardExamType = "JAMB" | "DLI" | "UNILAG" | "GENERAL" | null;
+
+const examTypeOptions: { label: string; value: LeaderboardExamType }[] = [
+    { label: "All Exams", value: null },
+    { label: "JAMB", value: "JAMB" },
+    { label: "DLI", value: "DLI" },
+    { label: "UNILAG", value: "UNILAG" },
+    { label: "GENERAL", value: "GENERAL" },
+];
+
 const Leaderboard = () => {
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<"weekly" | "monthly" | "all_time">("all_time");
-    const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
-    const [currentUserRank, setCurrentUserRank] = useState<LeaderboardUser | null>(null);
+    const [filter, setFilter] = useState<LeaderboardPeriod>("all_time");
+    const [examType, setExamType] = useState<LeaderboardExamType>(null);
 
-    const fetchLeaderboard = useCallback(async (type: "weekly" | "monthly" | "all_time") => {
-        try {
-            setLoading(true);
-            const response = await getLeaderboard({
-                type,
-                limit: 50,
-            });
-
-            if (response.success && response.data) {
-                setLeaderboard(response.data.leaderboard);
-                setCurrentUserRank(response.data.current_user);
-            }
-        } catch (error) {
-            console.error("Error fetching leaderboard:", error);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchLeaderboard(filter);
-    }, [filter, fetchLeaderboard]);
+    const { data, isLoading: loading } = useLeaderboard(filter, examType);
+    const leaderboard = data?.leaderboard ?? [];
+    const currentUserRank = data?.currentUser ?? null;
 
     const getRankIcon = (rank: number) => {
         if (rank === 1) return <Medal className="h-5 w-5 text-yellow-500" />;
@@ -65,7 +56,6 @@ const Leaderboard = () => {
     return (
         <AppLayout>
             <div className="w-full max-w-4xl mx-auto space-y-6 pb-10">
-                {/* Header Section */}
                 <div className="flex flex-col gap-4">
                     <Button
                         variant="ghost"
@@ -92,7 +82,6 @@ const Leaderboard = () => {
                     </div>
                 </div>
 
-                {/* Filters Section */}
                 <Card className="border-border/50">
                     <CardHeader className="pb-3 pt-4">
                         <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -100,13 +89,13 @@ const Leaderboard = () => {
                             Performance Ranking
                         </CardTitle>
                         <CardDescription className="text-xs">
-                            Filter by time period to see different rankings
+                            Filter by time period and exam type
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-4">
                         <Tabs
                             value={filter}
-                            onValueChange={(v) => setFilter(v as any)}
+                            onValueChange={(v) => setFilter(v as LeaderboardPeriod)}
                             className="w-full"
                         >
                             <TabsList className="grid w-full grid-cols-3">
@@ -115,10 +104,26 @@ const Leaderboard = () => {
                                 <TabsTrigger value="all_time" className="text-xs">All Time</TabsTrigger>
                             </TabsList>
                         </Tabs>
+
+                        <div className="flex flex-wrap gap-2">
+                            {examTypeOptions.map((option) => (
+                                <button
+                                    key={option.label}
+                                    type="button"
+                                    onClick={() => setExamType(option.value)}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                                        examType === option.value
+                                            ? "bg-primary text-primary-foreground border-primary"
+                                            : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                                    }`}
+                                >
+                                    {option.label}
+                                </button>
+                            ))}
+                        </div>
                     </CardContent>
                 </Card>
 
-                {/* Current User Highlighting (if ranked) */}
                 {currentUserRank && !loading && (
                     <div className="space-y-2">
                         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider ml-1">
@@ -128,7 +133,6 @@ const Leaderboard = () => {
                     </div>
                 )}
 
-                {/* Leaderboard List */}
                 <div className="space-y-3">
                     <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider ml-1">
                         Overall Rankings

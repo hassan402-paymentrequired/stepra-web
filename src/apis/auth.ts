@@ -50,6 +50,15 @@ export const getCurrentUser = async () => {
   return response.data;
 };
 
+export const refreshToken = async (): Promise<{
+  success: boolean;
+  data?: { token: string };
+  message?: string;
+}> => {
+  const response = await api.post('/refresh');
+  return response.data;
+};
+
 // Password Reset functions
 export const sendPasswordResetOtp = async (payload: PasswordResetOtpPayload): Promise<PasswordResetOtpResponse> => {
   const response = await api.post('/password-reset/send-otp', payload);

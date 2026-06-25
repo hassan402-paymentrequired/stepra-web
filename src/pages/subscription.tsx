@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router";
 import AppLayout from "@/components/layouts/app-layout";
 import { Button } from "@/components/ui";
 import {
@@ -34,6 +35,7 @@ import { toast } from "sonner";
 
 const Subscription = () => {
   const { refetch: refetchUser } = useUser();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
@@ -42,9 +44,67 @@ const Subscription = () => {
   const [pin, setPin] = useState("");
   const [pinProcessing, setPinProcessing] = useState(false);
 
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [planResponse, statusResponse] = await Promise.all([
+        getSubscriptionPlans(),
+        getSubscriptionStatus(),
+      ]);
+
+      if (planResponse.success) {
+        setPlan(planResponse.data);
+      }
+      if (statusResponse.success) {
+        setStatus(statusResponse.data);
+      }
+    } catch (error) {
+      const errorMessage = getApiErrorMessage(error as AxiosError);
+      toast.error(`Error: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
+
+  const handlePaymentReference = useCallback(async (reference: string) => {
+    try {
+      setProcessing(true);
+      const verifyResponse = await verifyPayment({ reference });
+
+      if (verifyResponse.success) {
+        await fetchData();
+        await refetchUser();
+        try {
+          await registerSubscriptionDevice();
+        } catch {
+          // Ignore device binding errors
+        }
+        toast.success("Your subscription has been activated!");
+      } else {
+        toast.error(verifyResponse.message || "Payment verification failed.");
+      }
+    } catch (error) {
+      const errorMessage = getApiErrorMessage(error as AxiosError);
+      toast.error(`Payment verification failed: ${errorMessage}`);
+    } finally {
+      setProcessing(false);
+      searchParams.delete("reference");
+      searchParams.delete("trxref");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [refetchUser, searchParams, setSearchParams, fetchData]);
+
+  // Handle Paystack redirect callback (?reference=xxx)
+  useEffect(() => {
+    const reference = searchParams.get("reference") || searchParams.get("trxref");
+    if (reference) {
+      handlePaymentReference(reference);
+    }
+  }, [searchParams, handlePaymentReference]);
 
   // Poll for payment completion when payment window is open
   useEffect(() => {
@@ -66,33 +126,11 @@ const Subscription = () => {
     }, 2000);
 
     return () => clearInterval(checkPayment);
-  }, [paymentWindow, refetchUser]);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [planResponse, statusResponse] = await Promise.all([
-        getSubscriptionPlans(),
-        getSubscriptionStatus(),
-      ]);
-
-      if (planResponse.success) {
-        setPlan(planResponse.data);
-      }
-      if (statusResponse.success) {
-        setStatus(statusResponse.data);
-      }
-    } catch (error) {
-      const errorMessage = getApiErrorMessage(error as AxiosError);
-      alert(`Error: ${errorMessage}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [paymentWindow, refetchUser, fetchData]);
 
   const handleSubscribe = async () => {
     if (!plan) {
-      alert("Subscription plan not available");
+      toast.error("Subscription plan not available");
       return;
     }
 
@@ -133,7 +171,7 @@ const Subscription = () => {
                   await fetchData();
                   await refetchUser();
                   await registerSubscriptionDevice();
-                  alert("Your subscription has been activated!");
+                  toast.success("Your subscription has been activated!");
                 }
               } catch (error) {
                 console.error("Payment verification error:", error);
@@ -162,7 +200,7 @@ const Subscription = () => {
       }
     } catch (error) {
       const errorMessage = getApiErrorMessage(error as AxiosError);
-      alert(`Payment Error: ${errorMessage}`);
+      toast.error(`Payment Error: ${errorMessage}`);
     } finally {
       setProcessing(false);
     }
@@ -171,7 +209,7 @@ const Subscription = () => {
   const handlePinRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pin.length !== 6) {
-      alert("PIN must be exactly 6 digits.");
+      toast.error("PIN must be exactly 6 digits.");
       return;
     }
 
@@ -231,9 +269,6 @@ const Subscription = () => {
               </p>
             </div>
           )}
-
-laramic"stepra.2
-         
 
           {/* Error Message if no plan available */}
           {!plan && !loading && !hasActiveSubscription && (

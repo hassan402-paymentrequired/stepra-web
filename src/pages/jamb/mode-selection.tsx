@@ -2,10 +2,15 @@ import { useNavigate } from "react-router";
 import AppLayout from "@/components/layouts/app-layout";
 import { FileText, BookOpen, ArrowRight } from "lucide-react";
 
+import { useExamSelection } from "@/contexts/ExamSelectionContext";
+
 const JAMBModeSelection = () => {
   const navigate = useNavigate();
+  const { selection, setQuestionMode } = useExamSelection();
+  const examLabel = selection.examTypeName || "JAMB";
 
   const handleSelectMode = (mode: "past_question" | "practice") => {
+    setQuestionMode(mode);
     if (mode === "past_question") {
       navigate("/jamb/past-questions");
     } else {
@@ -19,7 +24,7 @@ const JAMBModeSelection = () => {
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold mb-2">Select Question Mode</h1>
           <p className="text-muted-foreground text-sm">
-            Choose how you want to practice JAMB questions
+            Choose how you want to practice {examLabel} questions
           </p>
         </div>
 

@@ -154,7 +154,14 @@ export const startExamAttempt = async (
 
 export const startPracticeSession = async (data: {
   exam_type: string;
-  subjects: Array<{ subject: string; question_count: number; question_ids?: number[]; questions?: Question[] }>;
+  subjects: Array<{
+    subject: string;
+    question_count: number;
+    year?: number;
+    question_ids?: number[];
+    subject_test_id?: number;
+    questions?: Question[];
+  }>;
   duration_minutes: number;
 }) => {
   const response = await api.post('/practice/start', data);
@@ -192,5 +199,40 @@ export const getExamAttempt = async (attemptId: number) => {
 
 export const getExamResults = async (attemptId: number) => {
   const response = await api.get(`/exam-attempts/${attemptId}/results`);
+  return response.data;
+};
+
+export interface InProgressAttempt {
+  id: number;
+  exam: {
+    id: number;
+    title: string;
+    type: string;
+  };
+  status: string;
+}
+
+export const getInProgressAttempts = async (): Promise<{
+  success: boolean;
+  data: InProgressAttempt[];
+}> => {
+  const response = await api.get('/exam-attempts', {
+    params: { status: 'in_progress' },
+  });
+  return response.data;
+};
+
+export const submitAnswersBulk = async (
+  attemptId: number,
+  data: {
+    answers: Array<{
+      question_id: number;
+      answer_id?: number;
+      answer_text?: string;
+      time_spent?: number;
+    }>;
+  }
+) => {
+  const response = await api.post(`/exam-attempts/${attemptId}/submit-answers-bulk`, data);
   return response.data;
 };

@@ -2,7 +2,19 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { Modal } from "antd";
 import { Button } from "@/components/ui";
-import { submitAnswer, completeExamAttempt } from "@/apis/exam";
+import { submitAnswersBulk, completeExamAttempt } from "@/apis/exam";
+import { recordStreak } from "@/apis/streak";
+import { buildAnswersPayload } from "@/lib/exam-answer-utils";
+import {
+  saveExamSession,
+  loadExamSession,
+  clearExamSession,
+  saveExamProgress,
+  loadExamProgress,
+  clearExamProgress,
+  getRemainingSeconds,
+  type ExamScreenSession,
+} from "@/lib/exam-session-storage";
 import { getApiErrorMessage } from "@/utils";
 import type { AxiosError } from "axios";
 import type { Question } from "@/apis/exam";
@@ -29,13 +41,31 @@ interface ExamScreenLocationState {
   };
   timeMinutes: number;
   subjects: string[];
-  isPractice?: boolean; // Fla
+  isPractice?: boolean;
 }
+
+const resolveExamSession = (
+  locationState: ExamScreenLocationState | null
+): ExamScreenSession | null => {
+  if (locationState?.attemptId && locationState.subjectsQuestions) {
+    const session: ExamScreenSession = {
+      ...locationState,
+      startedAt: Date.now(),
+    };
+    saveExamSession(session);
+    return session;
+  }
+  return loadExamSession();
+};
 
 const ExamScreen = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as ExamScreenLocationState;
+  const locationState = location.state as ExamScreenLocationState | null;
+  const examSession = resolveExamSession(locationState);
+  const savedProgress = examSession?.attemptId
+    ? loadExamProgress(examSession.attemptId)
+    : null;
   const { data: user } = useUser();
 
   // Screenshot prevention hook
@@ -43,13 +73,13 @@ const ExamScreen = () => {
     enabled: true,
     strictMode: true,
     logToBackend: true,
-    attemptId: state?.attemptId,
+    attemptId: examSession?.attemptId,
     watermarkText: user ? `${user.name} - ${user.email} - Practice Session` : 'CONFIDENTIAL - PRACTICE SESSION',
     onScreenshotAttempt: () => {
-      console.warn('Screenshot attempt detected for user:', user?.email, 'in attempt:', state?.attemptId);
+      console.warn('Screenshot attempt detected for user:', user?.email, 'in attempt:', examSession?.attemptId);
     },
     onSuspiciousActivity: (type) => {
-      console.warn('Suspicious activity detected:', type, 'by user:', user?.email, 'in attempt:', state?.attemptId);
+      console.warn('Suspicious activity detected:', type, 'by user:', user?.email, 'in attempt:', examSession?.attemptId);
     },
   });
 
@@ -346,37 +376,66 @@ const ExamScreen = () => {
   // Refs for performance optimization
   const submitTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null as unknown as ReturnType<typeof setTimeout>);
   const autoSubmitRef = useRef(false);
-  const hasSubmittedOnUnmount = useRef(false);
 
   // Core state
   const [subjectsQuestions] = useState<Record<string, Question[]>>(
-    state?.subjectsQuestions || {}
+    examSession?.subjectsQuestions || {}
   );
   const [currentSubject, setCurrentSubject] = useState<string>(
-    state?.subjects?.[0] || Object.keys(state?.subjectsQuestions || {})[0] || ""
+    savedProgress?.currentSubject ||
+      examSession?.subjects?.[0] ||
+      Object.keys(examSession?.subjectsQuestions || {})[0] ||
+      ""
   );
 
   // Optimized subject index initialization
   const [subjectCurrentIndex, setSubjectCurrentIndex] = useState<Record<string, number>>(() =>
-    Object.keys(state?.subjectsQuestions || {}).reduce((acc, subject) => {
-      acc[subject] = 0;
-      return acc;
-    }, {} as Record<string, number>)
+    savedProgress?.subjectCurrentIndex ??
+      Object.keys(examSession?.subjectsQuestions || {}).reduce((acc, subject) => {
+        acc[subject] = 0;
+        return acc;
+      }, {} as Record<string, number>)
   );
 
   // Answer state
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number | string>>({});
-  const [textInputAnswers, setTextInputAnswers] = useState<Record<number, string>>({});
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number | string>>(
+    () => savedProgress?.selectedAnswers ?? {}
+  );
+  const [textInputAnswers, setTextInputAnswers] = useState<Record<number, string>>(
+    () => savedProgress?.textInputAnswers ?? {}
+  );
 
   // UI state
-  const [timeRemaining, setTimeRemaining] = useState((state?.timeMinutes || 30) * 60);
+  const [timeRemaining, setTimeRemaining] = useState(() =>
+    examSession ? getRemainingSeconds(examSession) : 0
+  );
   const [loading, setLoading] = useState(false);
   const [showSubjectModal, setShowSubjectModal] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const [showConfirmSubmitModal, setShowConfirmSubmitModal] = useState(false);
   const [unansweredSubjectsCount, setUnansweredSubjectsCount] = useState(0);
   const [isFooterExpanded, setIsFooterExpanded] = useState(false);
-  const [questionStartTime, setQuestionStartTime] = useState<Record<number, number>>({});
+  const [questionStartTime, setQuestionStartTime] = useState<Record<number, number>>(
+    () => savedProgress?.questionStartTime ?? {}
+  );
+
+  useEffect(() => {
+    if (!examSession?.attemptId) return;
+    saveExamProgress(examSession.attemptId, {
+      selectedAnswers,
+      textInputAnswers,
+      subjectCurrentIndex,
+      currentSubject,
+      questionStartTime,
+    });
+  }, [
+    examSession?.attemptId,
+    selectedAnswers,
+    textInputAnswers,
+    subjectCurrentIndex,
+    currentSubject,
+    questionStartTime,
+  ]);
 
   // Calculator state
   const [calculatorDisplay, setCalculatorDisplay] = useState("0");
@@ -427,6 +486,125 @@ const ExamScreen = () => {
     allSubjectsCompleted,
   } = memoizedData;
 
+  const submitAllAnswers = useCallback(async () => {
+    if (!examSession?.attemptId) return;
+
+    const answers = buildAnswersPayload(
+      selectedAnswers,
+      textInputAnswers,
+      questionStartTime
+    );
+
+    if (answers.length > 0) {
+      await submitAnswersBulk(examSession.attemptId, { answers });
+    }
+  }, [examSession, selectedAnswers, textInputAnswers, questionStartTime]);
+
+  const proceedWithSubmission = useCallback(async () => {
+    if (!examSession?.attemptId) return;
+
+    try {
+      setLoading(true);
+      autoSubmitRef.current = true;
+
+      await submitAllAnswers();
+      await completeExamAttempt(examSession.attemptId, {
+        subjects: examSession.subjects?.map((subject) => ({
+          subject,
+          question_count: subjectsQuestions[subject]?.length || 0,
+        })),
+        duration_minutes: examSession.timeMinutes,
+      });
+
+      try {
+        await recordStreak();
+      } catch {
+        // Non-blocking
+      }
+
+      clearExamSession();
+      clearExamProgress(examSession.attemptId);
+      navigate("/exam/results", {
+        state: {
+          attemptId: examSession.attemptId,
+          isPracticeSession: examSession?.isPractice === true,
+        },
+      });
+    } catch (error) {
+      const errorMessage = getApiErrorMessage(error as AxiosError);
+      console.error('Error completing exam:', errorMessage);
+      toast.error(errorMessage);
+      autoSubmitRef.current = false;
+    } finally {
+      setLoading(false);
+      setShowConfirmSubmitModal(false);
+    }
+  }, [examSession, subjectsQuestions, navigate, submitAllAnswers]);
+
+  const handleCompleteExam = useCallback(
+    async (autoSubmit = false) => {
+      if (!examSession?.attemptId) return;
+
+      const unansweredSubjects = Object.keys(subjectsQuestions).filter(
+        (subject) => {
+          const questions = subjectsQuestions[subject] || [];
+          return questions.some((q) => {
+            if (
+              q.question_type === "multiple_choice" ||
+              q.question_type === "true_false"
+            ) {
+              return selectedAnswers[q.id] === undefined;
+            }
+            return !textInputAnswers[q.id] || textInputAnswers[q.id] === "";
+          });
+        }
+      );
+
+      if (!autoSubmit && unansweredSubjects.length > 0) {
+        setUnansweredSubjectsCount(unansweredSubjects.length);
+        setShowConfirmSubmitModal(true);
+        return;
+      }
+
+      await proceedWithSubmission();
+    },
+    [examSession, selectedAnswers, textInputAnswers, subjectsQuestions, proceedWithSubmission]
+  );
+
+  const handleAutoSubmit = useCallback(async (reason: 'user_exit' | 'timeout' | 'manual' = 'user_exit') => {
+    if (autoSubmitRef.current || !examSession?.attemptId) return;
+
+    autoSubmitRef.current = true;
+    setLoading(true);
+
+    try {
+      await submitAllAnswers();
+      await completeExamAttempt(examSession.attemptId);
+      try {
+        await recordStreak();
+      } catch {
+        // Non-blocking
+      }
+      clearExamSession();
+      clearExamProgress(examSession.attemptId);
+
+      toast.success(`Practice session ${reason === 'user_exit' ? 'auto-submitted' : 'completed'} successfully!`);
+      navigate('/exam/results', {
+        state: {
+          attemptId: examSession.attemptId,
+          autoSubmitted: reason === 'user_exit',
+          isPracticeSession: examSession?.isPractice === true,
+        },
+      });
+    } catch (error) {
+      console.error('Auto-submit error:', error);
+      toast.error('Submission failed. Please try again.');
+      autoSubmitRef.current = false;
+    } finally {
+      setLoading(false);
+    }
+  }, [examSession, navigate, submitAllAnswers]);
+
   // Optimized auto-submit and exit warning system
   useEffect(() => {
     let isSubmitting = false;
@@ -438,28 +616,28 @@ const ExamScreen = () => {
       e.returnValue = message;
 
       // Auto-complete the attempt (answers are already submitted as user progresses)
-      if (!isSubmitting && state?.attemptId && !autoSubmitRef.current) {
+      if (!isSubmitting && examSession?.attemptId && !autoSubmitRef.current) {
         isSubmitting = true;
         autoSubmitRef.current = true;
 
         // Use sendBeacon for reliable submission during page unload
         const completeData = {
-          subjects: state.subjects?.map(subject => ({
+          subjects: examSession.subjects?.map(subject => ({
             subject,
             question_count: subjectsQuestions[subject]?.length || 0
           })),
-          duration_minutes: state.timeMinutes,
+          duration_minutes: examSession.timeMinutes,
         };
 
         if (navigator.sendBeacon) {
           const data = JSON.stringify(completeData);
           navigator.sendBeacon(
-            `/api/exam-attempts/${state.attemptId}/complete`,
+            `/api/exam-attempts/${examSession.attemptId}/complete`,
             new Blob([data], { type: 'application/json' })
           );
         } else {
           // Fallback for browsers without sendBeacon
-          fetch(`/api/exam-attempts/${state.attemptId}/complete`, {
+          fetch(`/api/exam-attempts/${examSession.attemptId}/complete`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(completeData),
@@ -501,57 +679,7 @@ const ExamScreen = () => {
         clearTimeout(submitTimeoutRef.current);
       }
     };
-  }, [selectedAnswers, textInputAnswers, timeRemaining, state]);
-
-  // Auto-submit function with optimized batch processing
-  const handleAutoSubmit = useCallback(async (reason: 'user_exit' | 'timeout' | 'manual' = 'user_exit') => {
-    if (autoSubmitRef.current || !state?.attemptId) return;
-
-    autoSubmitRef.current = true;
-    setLoading(true);
-
-    try {
-      // Efficiently collect answers without looping through all questions
-      const submissions = [
-        ...Object.entries(selectedAnswers).map(([qId, aId]) => ({
-          question_id: parseInt(qId),
-          answer_id: typeof aId === 'number' ? aId : 0,
-          time_spent: questionStartTime[parseInt(qId)] ? Math.floor((Date.now() - questionStartTime[parseInt(qId)]) / 1000) : 0
-        })),
-        ...Object.entries(textInputAnswers)
-          .filter(([, answer]) => answer.trim())
-          .map(([qId]) => ({
-            question_id: parseInt(qId),
-            answer_id: 0,
-            time_spent: questionStartTime[parseInt(qId)] ? Math.floor((Date.now() - questionStartTime[parseInt(qId)]) / 1000) : 0
-          }))
-      ];
-
-      // Submit in batches of 20 for optimal performance
-      const batchSize = 20;
-      for (let i = 0; i < submissions.length; i += batchSize) {
-        const batch = submissions.slice(i, i + batchSize);
-        await Promise.allSettled(batch.map(answer =>
-          submitAnswer(state.attemptId, answer).catch(err =>
-            console.warn('Answer submission failed:', err)
-          )
-        ));
-      }
-
-      // Complete attempt
-      await completeExamAttempt(state.attemptId);
-
-      toast.success(`Practice session ${reason === 'user_exit' ? 'auto-submitted' : 'completed'} successfully!`);
-      navigate('/exam/results', { state: { attemptId: state.attemptId, autoSubmitted: reason === 'user_exit', isPracticeSession: state?.isPractice === true } });
-
-    } catch (error) {
-      console.error('Auto-submit error:', error);
-      toast.error('Submission failed. Please try again.');
-      autoSubmitRef.current = false;
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedAnswers, textInputAnswers, questionStartTime, state, navigate]);
+  }, [examSession, handleAutoSubmit]);
 
   // Track time spent on each question
   useEffect(() => {
@@ -561,57 +689,13 @@ const ExamScreen = () => {
         ...prev,
         [currentQuestion.id]: startTime,
       }));
-
-      return () => {
-        const endTime = Date.now();
-        const timeSpent = Math.floor((endTime - startTime) / 1000);
-        // Auto-submit answer when leaving question if answer is selected
-        if (state?.attemptId && currentQuestion) {
-          if (
-            (currentQuestion.question_type === "multiple_choice" ||
-              currentQuestion.question_type === "true_false") &&
-            selectedAnswers[currentQuestion.id]
-          ) {
-            submitAnswer(state.attemptId, {
-              question_id: currentQuestion.id,
-              answer_id: selectedAnswers[currentQuestion.id] as number,
-              time_spent: timeSpent,
-            }).catch(console.error);
-          } else if (
-            (currentQuestion.question_type === "text_input" ||
-              currentQuestion.question_type === "numeric_input") &&
-            textInputAnswers[currentQuestion.id]
-          ) {
-            // For text/numeric input, we need to find the answer ID or create a custom submission
-            // This might need API adjustment, but for now we'll handle it differently
-            const answerText = textInputAnswers[currentQuestion.id];
-            if (
-              answerText &&
-              currentQuestion.answers &&
-              currentQuestion.answers.length > 0
-            ) {
-              // Try to find matching answer or use first answer as placeholder
-              const matchingAnswer = currentQuestion.answers.find(
-                (a) => a.answer_text.toLowerCase() === answerText.toLowerCase()
-              );
-              if (matchingAnswer) {
-                submitAnswer(state.attemptId, {
-                  question_id: currentQuestion.id,
-                  answer_id: matchingAnswer.id,
-                  time_spent: timeSpent,
-                }).catch(console.error);
-              }
-            }
-          }
-        }
-      };
     }
   }, [currentQuestion?.id]);
 
   // Timer effect
   useEffect(() => {
     if (timeRemaining <= 0) {
-      if (state?.attemptId) {
+      if (examSession?.attemptId) {
         handleCompleteExam(true);
       }
       return;
@@ -622,155 +706,31 @@ const ExamScreen = () => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [timeRemaining]);
+  }, [timeRemaining, examSession?.attemptId, handleCompleteExam]);
 
-  // Submit exam on unmount (cleanup)
-  useEffect(() => {
-    return () => {
-      // Only submit if we haven't already submitted and we have an attempt
-      if (!hasSubmittedOnUnmount.current && state?.attemptId && !autoSubmitRef.current) {
-        hasSubmittedOnUnmount.current = true;
-
-        // Submit all remaining answers and complete the exam
-        const submissions = [
-          ...Object.entries(selectedAnswers).map(([qId, aId]) => ({
-            question_id: parseInt(qId),
-            answer_id: typeof aId === 'number' ? aId : 0,
-            time_spent: questionStartTime[parseInt(qId)] ? Math.floor((Date.now() - questionStartTime[parseInt(qId)]) / 1000) : 0
-          })),
-          ...Object.entries(textInputAnswers)
-            .filter(([_, answer]) => answer.trim())
-            .map(([qId, _]) => ({
-              question_id: parseInt(qId),
-              answer_id: 0,
-              time_spent: questionStartTime[parseInt(qId)] ? Math.floor((Date.now() - questionStartTime[parseInt(qId)]) / 1000) : 0
-            }))
-        ];
-
-        // Submit in batches using sendBeacon for reliability
-        const batchSize = 20;
-        for (let i = 0; i < submissions.length; i += batchSize) {
-          const batch = submissions.slice(i, i + batchSize);
-          const data = JSON.stringify({ answers: batch });
-          if (navigator.sendBeacon) {
-            navigator.sendBeacon(
-              `/api/exam-attempts/${state.attemptId}/submit-answer`,
-              new Blob([data], { type: 'application/json' })
-            );
-          }
-        }
-
-        // Complete the attempt
-        const completeData = JSON.stringify({
-          subjects: state.subjects?.map((subject) => ({
-            subject,
-            question_count: subjectsQuestions[subject]?.length || 0,
-          })),
-          duration_minutes: state.timeMinutes,
-        });
-
-        if (navigator.sendBeacon) {
-          navigator.sendBeacon(
-            `/api/exam-attempts/${state.attemptId}/complete`,
-            new Blob([completeData], { type: 'application/json' })
-          );
-        }
-      }
-    };
-  }, [state?.attemptId, selectedAnswers, textInputAnswers, questionStartTime, subjectsQuestions, state?.subjects, state?.timeMinutes]);
-
-
-  const handleSelectAnswer = async (answerId: number) => {
-    if (!currentQuestion || !state?.attemptId) {
-      console.warn('handleSelectAnswer called but missing data:', { currentQuestion, attemptId: state?.attemptId });
-      return;
-    }
-
-    console.log('handleSelectAnswer called:', {
-      questionId: currentQuestion.id,
-      answerId,
-      questionType: currentQuestion.question_type
-    });
+  const handleSelectAnswer = (answerId: number) => {
+    if (!currentQuestion || !examSession?.attemptId) return;
 
     setSelectedAnswers({
       ...selectedAnswers,
       [currentQuestion.id]: answerId,
     });
-
-    // Submit answer immediately
-    try {
-      const timeSpent = questionStartTime[currentQuestion.id]
-        ? Math.floor(
-          (Date.now() - questionStartTime[currentQuestion.id]) / 1000
-        )
-        : 0;
-
-      await submitAnswer(state.attemptId, {
-        question_id: currentQuestion.id,
-        answer_id: answerId,
-        time_spent: timeSpent,
-      });
-    } catch (error) {
-      console.error("Error submitting answer:", error);
-    }
   };
 
-  const handleTextInputChange = async (value: string) => {
-    if (!currentQuestion || !state?.attemptId) return;
+  const handleTextInputChange = (value: string) => {
+    if (!currentQuestion || !examSession?.attemptId) return;
 
     setTextInputAnswers({
       ...textInputAnswers,
       [currentQuestion.id]: value,
     });
-
-    // For text/numeric input, submit when user finishes typing (debounced)
-    // We'll submit on blur or when moving to next question
   };
 
-  const handleTextInputBlur = async () => {
-    if (!currentQuestion || !state?.attemptId) return;
-    const answerText = textInputAnswers[currentQuestion.id];
-    if (!answerText || !answerText.trim()) return;
-
-    try {
-      const timeSpent = questionStartTime[currentQuestion.id]
-        ? Math.floor(
-          (Date.now() - questionStartTime[currentQuestion.id]) / 1000
-        )
-        : 0;
-
-      // For text/numeric input, send answer_text directly to the API
-      await submitAnswer(state.attemptId, {
-        question_id: currentQuestion.id,
-        answer_text: answerText.trim(),
-        time_spent: timeSpent,
-      });
-    } catch (error) {
-      console.error("Error submitting text answer:", error);
-    }
+  const handleTextInputBlur = () => {
+    // Answers are submitted in bulk on exam completion
   };
 
-  const handleNext = async () => {
-    // Submit text answer if exists before moving to next question
-    if (currentQuestion &&
-      (currentQuestion.question_type === 'text_input' || currentQuestion.question_type === 'numeric_input')) {
-      const answerText = textInputAnswers[currentQuestion.id];
-      if (answerText && answerText.trim() && state?.attemptId) {
-        try {
-          const timeSpent = questionStartTime[currentQuestion.id]
-            ? Math.floor((Date.now() - questionStartTime[currentQuestion.id]) / 1000)
-            : 0;
-          await submitAnswer(state.attemptId, {
-            question_id: currentQuestion.id,
-            answer_text: answerText.trim(),
-            time_spent: timeSpent,
-          });
-        } catch (error) {
-          console.error("Error submitting text answer on next:", error);
-        }
-      }
-    }
-
+  const handleNext = () => {
     if (currentQuestionIndex < totalQuestionsForSubject - 1) {
       setSubjectCurrentIndex({
         ...subjectCurrentIndex,
@@ -792,68 +752,6 @@ const ExamScreen = () => {
     setCurrentSubject(subject);
     setShowSubjectModal(false);
   };
-
-
-  // Separate function to handle actual submission
-  const proceedWithSubmission = useCallback(async () => {
-    if (!state?.attemptId) return;
-
-    try {
-      setLoading(true);
-
-      // Complete the exam
-      await completeExamAttempt(state.attemptId, {
-        subjects: state.subjects?.map((subject) => ({
-          subject,
-          question_count: subjectsQuestions[subject]?.length || 0,
-        })),
-        duration_minutes: state.timeMinutes,
-      });
-
-      // Navigate to results page
-      navigate("/exam/results", { state: { attemptId: state.attemptId, isPracticeSession: state?.isPractice === true } });
-    } catch (error) {
-      const errorMessage = getApiErrorMessage(error as AxiosError);
-      console.error('Error completing exam:', errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-      setShowConfirmSubmitModal(false);
-    }
-  }, [state, subjectsQuestions, navigate]);
-
-  const handleCompleteExam = useCallback(
-    async (autoSubmit = false) => {
-      if (!state?.attemptId) return;
-
-      const unansweredSubjects = Object.keys(subjectsQuestions).filter(
-        (subject) => {
-          const questions = subjectsQuestions[subject] || [];
-          return questions.some((q) => {
-            if (
-              q.question_type === "multiple_choice" ||
-              q.question_type === "true_false"
-            ) {
-              return selectedAnswers[q.id] === undefined;
-            } else {
-              return !textInputAnswers[q.id] || textInputAnswers[q.id] === "";
-            }
-          });
-        }
-      );
-
-      if (!autoSubmit && unansweredSubjects.length > 0) {
-        // Show confirmation modal instead of browser alert
-        setUnansweredSubjectsCount(unansweredSubjects.length);
-        setShowConfirmSubmitModal(true);
-        return;
-      }
-
-      // Proceed with submission directly if auto-submit or no unanswered questions
-      await proceedWithSubmission();
-    },
-    [state, selectedAnswers, textInputAnswers, subjectsQuestions, proceedWithSubmission]
-  );
 
   const goToQuestion = (index: number) => {
     setSubjectCurrentIndex({
@@ -961,7 +859,7 @@ const ExamScreen = () => {
   };
 
   if (
-    !state ||
+    !examSession ||
     !subjectsQuestions ||
     Object.keys(subjectsQuestions).length === 0
   ) {

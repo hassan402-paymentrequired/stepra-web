@@ -8,6 +8,7 @@ import { getSubscriptionStatus } from "@/apis/subscription";
 import { getApiErrorMessage } from "@/utils";
 import { CheckCircle2, XCircle, BookOpen, CreditCard } from "lucide-react";
 import type { AxiosError } from "axios";
+import { toast } from "sonner";
 
 interface QuestionResult {
   question: {
@@ -98,7 +99,7 @@ const ExamResults = () => {
       }
     } catch (error) {
       const errorMessage = getApiErrorMessage(error as AxiosError);
-      alert(`Error: ${errorMessage}`);
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

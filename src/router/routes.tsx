@@ -9,6 +9,7 @@ import {
   VerifyEmail,
   ForgotPassword,
   ResetPassword,
+  Onboarding,
   JAMBModeSelection,
   JAMBPastQuestionsSelection,
   JAMBPracticeQuestionsSelection,
@@ -40,6 +41,10 @@ const routesObject: RouteObject[] = [
   {
     path: '/delete-account',
     element: <DeleteAccount />,
+  },
+  {
+    path: '/onboarding',
+    element: <Onboarding />,
   },
   {
     path: '/authenticate',

@@ -22,6 +22,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import type { AxiosError } from "axios";
+import { toast } from "sonner";
 
 const NETWORKS = [
   { value: "mtn", label: "MTN" },
@@ -57,7 +58,7 @@ const Referral = () => {
       }
     } catch (error) {
       const errorMessage = getApiErrorMessage(error as AxiosError);
-      alert(`Error: ${errorMessage}`);
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -71,7 +72,7 @@ const Referral = () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      alert("Failed to copy referral code");
+      toast.error("Failed to copy referral code");
     }
   };
 
@@ -92,7 +93,7 @@ const Referral = () => {
     } else {
       // Fallback: copy to clipboard
       await navigator.clipboard.writeText(shareText);
-      alert("Referral code copied to clipboard!");
+      toast.success("Referral code copied to clipboard!");
     }
   };
 
@@ -103,17 +104,17 @@ const Referral = () => {
       !withdrawalForm.phone_number ||
       withdrawalForm.phone_number.length < 10
     ) {
-      alert("Please enter a valid phone number");
+      toast.error("Please enter a valid phone number");
       return;
     }
 
     if (!withdrawalForm.amount || withdrawalForm.amount < 100) {
-      alert("Minimum withdrawal amount is ₦100");
+      toast.error("Minimum withdrawal amount is ₦100");
       return;
     }
 
     if (withdrawalForm.amount > referralData.credit_balance) {
-      alert("Insufficient credit balance");
+      toast.error("Insufficient credit balance");
       return;
     }
 
@@ -133,11 +134,11 @@ const Referral = () => {
         await fetchReferralData();
         setTimeout(() => setWithdrawalSuccess(false), 5000);
       } else {
-        alert(response.message || "Failed to process withdrawal");
+        toast.error(response.message || "Failed to process withdrawal");
       }
     } catch (error) {
       const errorMessage = getApiErrorMessage(error as AxiosError);
-      alert(`Error: ${errorMessage}`);
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setWithdrawing(false);
     }

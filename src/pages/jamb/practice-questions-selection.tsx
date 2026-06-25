@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
-import { Modal } from 'antd';
 import AppLayout from '@/components/layouts/app-layout';
 import { Button } from '@/components/ui';
-import { getSubjects, getPracticeQuestions, startPracticeSession } from '@/apis/exam';
-import { useUser } from '@/lib/auth';
-import { getSubscriptionStatus } from '@/apis/subscription';
+import { getSubjects, startPracticeSession } from '@/apis/exam';
+import { useExamSelection } from '@/contexts/ExamSelectionContext';
+import { useSubscriptionGate } from '@/hooks/useSubscriptionGate';
 import { Check, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils';
 import type { AxiosError } from 'axios';
@@ -13,7 +12,9 @@ import { toast } from 'sonner';
 
 const JAMBPracticeQuestionsSelection = () => {
   const navigate = useNavigate();
-  const { data: user } = useUser();
+  const { selection, setQuestionCount, setTimeMinutes } = useExamSelection();
+  const examType = selection.examTypeSlug || selection.examType?.toString() || 'JAMB';
+  const examTypeLabel = selection.examTypeName || 'JAMB';
 
   // Core state
   const [subjects, setSubjects] = useState<string[]>([]);
@@ -26,26 +27,12 @@ const JAMBPracticeQuestionsSelection = () => {
   const [showQuestionCountModal, setShowQuestionCountModal] = useState(false);
   const [currentSubjectForQuestionCount, setCurrentSubjectForQuestionCount] = useState<string | null>(null);
   const [startingExam, setStartingExam] = useState(false);
-  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
-  const [showLimitedQuestionsModal, setShowLimitedQuestionsModal] = useState(false);
-  const [limitedQuestionsData, setLimitedQuestionsData] = useState<{
-    available: number;
-    requested: number;
-    subject: string;
-  } | null>(null);
-  const [pendingPracticeData, setPendingPracticeData] = useState<{
-    subjectsQuestions: Record<string, any[]>;
-    subjectsData: Array<{ subject: string; question_count: number }>;
-    timeMinutesNum: number;
-    selectedSubjects: string[];
-    totalQuestions: number;
-  } | null>(null);
+  const { hasActiveSubscription, maxQuestionsPerSubject } = useSubscriptionGate();
 
   // Error state
   const [error, setError] = useState<string | null>(null);
 
   // Memoized values for performance
-  const maxQuestionsPerSubject = useMemo(() => hasActiveSubscription ? 100 : 5, [hasActiveSubscription]);
   const questionCountOptions = useMemo(() =>
     Array.from({ length: maxQuestionsPerSubject }, (_, i) => i + 1),
     [maxQuestionsPerSubject]
@@ -56,38 +43,20 @@ const JAMBPracticeQuestionsSelection = () => {
     [selectedSubjects, questionCounts]
   );
 
-  // Optimized subscription check
-  const checkSubscription = useCallback(async () => {
-    if (!user) return;
-
-    try {
-      const response = await getSubscriptionStatus();
-      if (response.success && response.data) {
-        setHasActiveSubscription(response.data.has_active_subscription || false);
-      }
-    } catch (error) {
-      console.warn('Subscription check failed, using fallback:', error);
-      // Fallback to user data check
-      const userHasActive = user.subscription_status === 'active' ||
-        (user.subscription_expires_at && new Date(user.subscription_expires_at) > new Date());
-      setHasActiveSubscription(userHasActive || false);
-    }
-  }, [user]);
-
   // Optimized subjects loading
   const loadSubjects = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await getSubjects('JAMB', 'practice');
+      const response = await getSubjects(examType, 'practice');
 
       if (!response.success) {
         throw new Error('Failed to load subjects');
       }
 
       if (!response.data || response.data.length === 0) {
-        setError('No JAMB practice subjects are available at the moment.');
+        setError('No practice subjects are available at the moment.');
         setSubjects([]);
         return;
       }
@@ -101,16 +70,12 @@ const JAMBPracticeQuestionsSelection = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [examType]);
 
   // Effects
   useEffect(() => {
     loadSubjects();
   }, [loadSubjects]);
-
-  useEffect(() => {
-    checkSubscription();
-  }, [checkSubscription]);
 
   // Optimized subject toggle with better UX
   const handleToggleSubject = useCallback((subject: string) => {
@@ -159,55 +124,6 @@ const JAMBPracticeQuestionsSelection = () => {
     });
   }, [selectedSubjects]);
 
-  const proceedWithPracticeSession = useCallback(async (
-    subjectsQuestions: Record<string, any[]>,
-    subjectsData: Array<{ subject: string; question_count: number }>,
-    timeMinutesNum: number,
-    selectedSubjects: string[],
-    totalQuestions: number
-  ) => {
-    try {
-      // Start practice session using dedicated API endpoint
-      const attemptResponse = await startPracticeSession({
-        exam_type: 'JAMB',
-        subjects: subjectsData.map(s => ({
-          ...s,
-          questions: subjectsQuestions[s.subject] || []
-        })),
-        duration_minutes: timeMinutesNum,
-      });
-
-      if (!attemptResponse.success) {
-        throw new Error(attemptResponse.message || 'Failed to create practice session');
-      }
-
-      // Success - navigate to exam screen with real attempt ID
-      navigate('/exam/screen', {
-        state: {
-          attemptId: attemptResponse.data.attempt.id, // Real database ID
-          examId: attemptResponse.data.attempt.exam_id,
-          subjectsQuestions,
-          exam: {
-            id: attemptResponse.data.attempt.exam_id,
-            title: `JAMB ${selectedSubjects.join(', ')} Practice Questions`,
-            duration: timeMinutesNum,
-            total_questions: totalQuestions,
-          },
-          timeMinutes: timeMinutesNum,
-          subjects: selectedSubjects,
-          isPractice: true,
-        },
-      });
-
-      toast.success('Practice session started successfully!');
-    } catch (error) {
-      console.error('Error starting exam:', error);
-      const errorMessage = getApiErrorMessage(error as AxiosError);
-      toast.error(errorMessage || 'Failed to start practice. Please try again.');
-      setStartingExam(false);
-    }
-  }, [navigate]);
-
   const selectQuestionCount = useCallback((count: number) => {
     if (!currentSubjectForQuestionCount) return;
 
@@ -239,72 +155,55 @@ const JAMBPracticeQuestionsSelection = () => {
     return true;
   }, [selectedSubjects, questionCounts]);
 
-  // Optimized exam start with parallel processing
   const handleStartExam = useCallback(async () => {
     if (!validateSelection()) return;
 
     try {
       setStartingExam(true);
 
-      // Calculate totals upfront
       const timeMinutesNum = selectedSubjects.length * 30;
-      const subjectsData = selectedSubjects.map(subject => ({
+      const subjectsData = selectedSubjects.map((subject) => ({
         subject,
         question_count: questionCounts[subject],
       }));
 
-      // For practice questions, we only need to fetch the questions themselves
-      // Practice questions are standalone and don't require an actual exam
-      const questionsResults = await Promise.allSettled([
-        Promise.all(
-          selectedSubjects.map(async (subject) => {
-            const questionCount = questionCounts[subject];
-            const response = await getPracticeQuestions('JAMB', subject, questionCount);
-            return { subject, response, questionCount };
-          })
-        )
-      ]);
+      const attemptResponse = await startPracticeSession({
+        exam_type: examType,
+        subjects: subjectsData,
+        duration_minutes: timeMinutesNum,
+      });
 
-      // Handle questions results
-      if (questionsResults[0].status === 'rejected') {
-        throw new Error('Failed to load practice questions');
-      }
-
-      const subjectsQuestions: Record<string, any[]> = {};
-      let hasErrors = false;
-
-      for (const { subject, response, questionCount } of questionsResults[0].value) {
-        if (!response.success) {
-          toast.error(`Failed to load questions for ${subject}`);
-          hasErrors = true;
-          continue;
-        }
-
-        const questions = response.data || [];
-        if (questions.length === 0) {
-          toast.error(`No practice questions available for ${subject}`);
-          hasErrors = true;
-          continue;
-        }
-
-        if (questions.length < questionCount) {
-          toast.warning(`Only ${questions.length} questions available for ${subject} (requested ${questionCount})`);
-        }
-
-        subjectsQuestions[subject] = questions.map((q: any) => ({
-          ...q,
-          subject,
-        }));
-      }
-
-      if (hasErrors) {
-        toast.error('Some subjects failed to load. Please try again.');
+      if (!attemptResponse.success || !attemptResponse.data?.attempt) {
+        toast.error(attemptResponse.message || 'Failed to start practice. Please try again.');
         return;
       }
 
-      // This function is called after user confirms or if no limited questions
-      await proceedWithPracticeSession(subjectsQuestions, subjectsData, timeMinutesNum, selectedSubjects, totalQuestions);
+      const { attempt, questions: subjectsQuestions } = attemptResponse.data;
 
+      selectedSubjects.forEach((subject) => {
+        const qCount = subjectsQuestions[subject]?.length || 0;
+        setQuestionCount(subject, qCount);
+      });
+      setTimeMinutes(timeMinutesNum);
+
+      const totalQ = Object.values(subjectsQuestions).flat().length;
+
+      navigate('/exam/screen', {
+        state: {
+          attemptId: attempt.id,
+          examId: attempt.exam_id || 0,
+          subjectsQuestions,
+          exam: {
+            id: attempt.exam_id || 0,
+            title: `${examTypeLabel} Practice`,
+            duration: timeMinutesNum,
+            total_questions: totalQ,
+          },
+          timeMinutes: timeMinutesNum,
+          subjects: selectedSubjects,
+          isPractice: true,
+        },
+      });
     } catch (error) {
       console.error('Error starting exam:', error);
       const errorMessage = getApiErrorMessage(error as AxiosError);
@@ -312,7 +211,16 @@ const JAMBPracticeQuestionsSelection = () => {
     } finally {
       setStartingExam(false);
     }
-  }, [selectedSubjects, questionCounts, totalQuestions, validateSelection, navigate]);
+  }, [
+    selectedSubjects,
+    questionCounts,
+    validateSelection,
+    navigate,
+    examType,
+    examTypeLabel,
+    setQuestionCount,
+    setTimeMinutes,
+  ]);
 
   // Loading state
   if (loading) {
@@ -554,80 +462,6 @@ const JAMBPracticeQuestionsSelection = () => {
         </div>
       )}
 
-      {/* Limited Questions Confirmation Modal */}
-      <Modal
-        open={showLimitedQuestionsModal}
-        onCancel={() => {
-          setShowLimitedQuestionsModal(false);
-          setLimitedQuestionsData(null);
-          setPendingPracticeData(null);
-          setStartingExam(false);
-        }}
-        footer={null}
-        closable={true}
-        width={400}
-        centered
-      >
-        <div className="text-center py-2">
-          <div className="flex justify-center mb-4">
-            <div className="w-14 h-14 rounded-full bg-yellow-100 flex items-center justify-center">
-              <AlertCircle className="h-7 w-7 text-yellow-600" />
-            </div>
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Limited Questions Available</h3>
-          <p className="text-muted-foreground text-sm mb-6">
-            Only {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''} available for {limitedQuestionsData?.subject} (requested {limitedQuestionsData?.requested}).
-            <br />
-            Would you like to proceed with {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''}?
-          </p>
-          <div className="flex flex-col gap-2">
-            <Button
-              onClick={async () => {
-                if (pendingPracticeData && limitedQuestionsData) {
-                  setShowLimitedQuestionsModal(false);
-                  // Update question count for the limited subject
-                  const updatedSubjectsData = pendingPracticeData.subjectsData.map(subj =>
-                    subj.subject === limitedQuestionsData.subject
-                      ? { ...subj, question_count: limitedQuestionsData.available }
-                      : subj
-                  );
-                  // Update subjectsQuestions to use only available questions
-                  const updatedSubjectsQuestions = { ...pendingPracticeData.subjectsQuestions };
-                  if (updatedSubjectsQuestions[limitedQuestionsData.subject]) {
-                    updatedSubjectsQuestions[limitedQuestionsData.subject] =
-                      updatedSubjectsQuestions[limitedQuestionsData.subject].slice(0, limitedQuestionsData.available);
-                  }
-                  const updatedTotalQuestions = pendingPracticeData.totalQuestions - limitedQuestionsData.requested + limitedQuestionsData.available;
-                  await proceedWithPracticeSession(
-                    updatedSubjectsQuestions,
-                    updatedSubjectsData,
-                    pendingPracticeData.timeMinutesNum,
-                    pendingPracticeData.selectedSubjects,
-                    updatedTotalQuestions
-                  );
-                  setLimitedQuestionsData(null);
-                  setPendingPracticeData(null);
-                }
-              }}
-              className="w-full"
-            >
-              Proceed with {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowLimitedQuestionsModal(false);
-                setLimitedQuestionsData(null);
-                setPendingPracticeData(null);
-                setStartingExam(false);
-              }}
-              className="w-full"
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </AppLayout>
   );
 };

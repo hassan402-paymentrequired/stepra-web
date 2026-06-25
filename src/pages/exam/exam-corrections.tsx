@@ -13,6 +13,7 @@ import {
   Check,
 } from "lucide-react";
 import type { AxiosError } from "axios";
+import { toast } from "sonner";
 import type { Question } from "@/apis/exam";
 
 interface QuestionResult {
@@ -261,7 +262,7 @@ const ExamCorrections = () => {
       }
     } catch (error) {
       const errorMessage = getApiErrorMessage(error as AxiosError);
-      alert(`Error: ${errorMessage}`);
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

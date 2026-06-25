@@ -7,8 +7,11 @@ import { useUser } from "@/lib/auth";
 import { GraduationCap, ArrowRight, Loader2 } from "lucide-react";
 import { getApiErrorMessage } from "@/utils";
 import type { AxiosError } from "axios";
+import { useExamSelection } from "@/contexts/ExamSelectionContext";
 
 const UnilagDepartments = () => {
+  const { selection } = useExamSelection();
+  const examLabel = selection.examTypeName || "UNILAG";
   const navigate = useNavigate();
   const { data: user } = useUser();
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -88,7 +91,7 @@ const UnilagDepartments = () => {
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Select Department</h1>
             <p className="text-muted-foreground">
-              Choose your department to practice Unilag questions
+              Choose your department to practice {examLabel} questions
             </p>
           </div>
 

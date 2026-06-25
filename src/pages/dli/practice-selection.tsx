@@ -1,15 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { Modal } from "antd";
 import AppLayout from "@/components/layouts/app-layout";
 import { Button } from "@/components/ui";
 import {
   getSubjects,
-  getPracticeQuestions,
   startPracticeSession,
 } from "@/apis/exam";
-import { useUser } from "@/lib/auth";
-import { getSubscriptionStatus } from "@/apis/subscription";
+import { useSubscriptionGate } from "@/hooks/useSubscriptionGate";
 import {
   Check,
   ChevronDown,
@@ -17,10 +14,10 @@ import {
 } from "lucide-react";
 import { getApiErrorMessage } from "@/utils";
 import type { AxiosError } from "axios";
+import { toast } from "sonner";
 
 const DLIPracticeSelection = () => {
   const navigate = useNavigate();
-  const { data: user } = useUser();
   const [subjects, setSubjects] = useState<string[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [questionCount, setQuestionCount] = useState<number | null>(null);
@@ -30,92 +27,13 @@ const DLIPracticeSelection = () => {
   const [showSubjectModal, setShowSubjectModal] = useState(false);
   const [showQuestionCountModal, setShowQuestionCountModal] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
-  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
-  const [showLimitedQuestionsModal, setShowLimitedQuestionsModal] = useState(false);
-  const [limitedQuestionsData, setLimitedQuestionsData] = useState<{
-    available: number;
-    requested: number;
-    subject: string;
-  } | null>(null);
+  const { hasActiveSubscription, maxQuestionsPerSubject } = useSubscriptionGate({ premiumLimit: 50 });
 
-  // Fetch subscription status from API for accurate check
-  useEffect(() => {
-    const checkSubscription = async () => {
-      try {
-        const response = await getSubscriptionStatus();
-        if (response.success && response.data) {
-          setHasActiveSubscription(response.data.has_active_subscription || false);
-        }
-      } catch (error) {
-        // Fallback to user data check if API fails
-        const userHasActive =
-          user?.subscription_status === "active" ||
-          (user?.subscription_expires_at &&
-            new Date(user.subscription_expires_at) > new Date());
-        setHasActiveSubscription(userHasActive || false);
-      }
-    };
-
-    if (user) {
-      checkSubscription();
-    }
-  }, [user]);
-
-  const maxQuestionsPerSubject = hasActiveSubscription ? 50 : 5;
   const questionCountOptions = Array.from(
     { length: maxQuestionsPerSubject },
     (_, i) => i + 1
   );
   const timeOptions = Array.from({ length: 120 }, (_, i) => i + 1);
-
-  const proceedWithPractice = async (
-    allQuestions: any[],
-    selectedSubject: string,
-    questionCount: number,
-    timeMinutes: number
-  ) => {
-    // Add subject identifier to questions
-    const questionsWithSubject = allQuestions.map((q: any) => ({
-      ...q,
-      subject: selectedSubject,
-    }));
-
-    // Start practice session using dedicated API endpoint (no exam record needed)
-    const attemptResponse = await startPracticeSession({
-      exam_type: "DLI",
-      subjects: [{
-        subject: selectedSubject,
-        question_count: Math.min(questionCount, allQuestions.length),
-        questions: allQuestions,
-      }],
-      duration_minutes: timeMinutes,
-    });
-
-    if (!attemptResponse.success) {
-      alert(attemptResponse.message || "Failed to start practice. Please try again.");
-      return;
-    }
-
-    // Navigate to exam screen
-    navigate("/exam/screen", {
-      state: {
-        attemptId: attemptResponse.data.attempt.id,
-        examId: attemptResponse.data.attempt.exam_id,
-        subjectsQuestions: {
-          [selectedSubject]: questionsWithSubject,
-        },
-        exam: {
-          id: attemptResponse.data.attempt.exam_id,
-          title: `DLI ${selectedSubject} Practice Questions`,
-          duration: timeMinutes,
-          total_questions: questionsWithSubject.length,
-        },
-        timeMinutes: timeMinutes,
-        subjects: [selectedSubject],
-        isPractice: true,
-      },
-    });
-  };
 
   useEffect(() => {
     loadSubjects();
@@ -129,12 +47,12 @@ const DLIPracticeSelection = () => {
       if (response.success && response.data) {
         setSubjects(response.data);
         if (response.data.length === 0) {
-          alert("No DLI practice courses are available at the moment.");
+          toast.error("No DLI practice courses are available at the moment.");
         }
       }
     } catch (error) {
       const errorMessage = getApiErrorMessage(error as AxiosError);
-      alert(`Error: ${errorMessage}`);
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -142,74 +60,80 @@ const DLIPracticeSelection = () => {
 
   const handleStartPractice = async () => {
     if (!selectedSubject) {
-      alert("Please select a course to continue.");
+      toast.error("Please select a course to continue.");
       return;
     }
 
     if (!questionCount || questionCount < 1) {
-      alert("Please select a valid number of questions.");
+      toast.error("Please select a valid number of questions.");
       return;
     }
 
     if (questionCount > maxQuestionsPerSubject) {
-      alert(
+      toast.error(
         `Maximum allowed is ${maxQuestionsPerSubject} questions per course for DLI.`
       );
       return;
     }
 
     if (!timeMinutes || timeMinutes < 1) {
-      alert("Please select a valid duration in minutes.");
+      toast.error("Please select a valid duration in minutes.");
       return;
     }
 
     if (timeMinutes > 120) {
-      alert("Maximum allowed time is 120 minutes (2 hours).");
+      toast.error("Maximum allowed time is 120 minutes (2 hours).");
       return;
     }
 
     try {
       setStartingExam(true);
 
-      // Fetch practice questions
-      const questionsResponse = await getPracticeQuestions(
-        "DLI",
-        selectedSubject,
-        questionCount
-      );
+      const attemptResponse = await startPracticeSession({
+        exam_type: "DLI",
+        subjects: [{
+          subject: selectedSubject,
+          question_count: questionCount,
+        }],
+        duration_minutes: timeMinutes,
+      });
 
-      if (!questionsResponse.success) {
-        alert(
-          `Failed to load questions for ${selectedSubject}. Please try again.`
-        );
+      if (!attemptResponse.success || !attemptResponse.data?.attempt) {
+        toast.error(attemptResponse.message || "Failed to start practice. Please try again.");
         return;
       }
 
-      const allQuestions = questionsResponse.data || [];
+      const { attempt, questions } = attemptResponse.data;
+      const allQuestions = questions[selectedSubject] || [];
 
       if (allQuestions.length === 0) {
-        alert(
+        toast.error(
           `No practice questions available for ${selectedSubject}. Please try a different course.`
         );
         return;
       }
 
-      if (allQuestions.length < questionCount) {
-        // Show modal asking user if they want to proceed
-        setLimitedQuestionsData({
-          available: allQuestions.length,
-          requested: questionCount,
-          subject: selectedSubject,
-        });
-        setShowLimitedQuestionsModal(true);
-        return; // Wait for user decision
-      }
-
-      // Proceed with practice session
-      await proceedWithPractice(allQuestions, selectedSubject, questionCount, timeMinutes);
+      navigate("/exam/screen", {
+        state: {
+          attemptId: attempt.id,
+          examId: attempt.exam_id || 0,
+          subjectsQuestions: {
+            [selectedSubject]: allQuestions,
+          },
+          exam: {
+            id: attempt.exam_id || 0,
+            title: `DLI ${selectedSubject} Practice Questions`,
+            duration: timeMinutes,
+            total_questions: allQuestions.length,
+          },
+          timeMinutes: timeMinutes,
+          subjects: [selectedSubject],
+          isPractice: true,
+        },
+      });
     } catch (error) {
       const errorMessage = getApiErrorMessage(error as AxiosError);
-      alert(`Error: ${errorMessage}`);
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setStartingExam(false);
     }
@@ -487,77 +411,6 @@ const DLIPracticeSelection = () => {
         </div>
       )}
 
-      {/* Limited Questions Confirmation Modal */}
-      <Modal
-        open={showLimitedQuestionsModal}
-        onCancel={() => {
-          setShowLimitedQuestionsModal(false);
-          setLimitedQuestionsData(null);
-          setStartingExam(false);
-        }}
-        footer={null}
-        closable={true}
-        width={400}
-        centered
-      >
-        <div className="text-center py-2">
-          <div className="flex justify-center mb-4">
-            <div className="w-14 h-14 rounded-full bg-yellow-100 flex items-center justify-center">
-              <AlertCircle className="h-7 w-7 text-yellow-600" />
-            </div>
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Limited Questions Available</h3>
-          <p className="text-muted-foreground text-sm mb-6">
-            Only {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''} available for {limitedQuestionsData?.subject} (requested {limitedQuestionsData?.requested}).
-            <br />
-            Would you like to proceed with {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''}?
-          </p>
-          <div className="flex flex-col gap-2">
-            <Button
-              onClick={async () => {
-                if (limitedQuestionsData && selectedSubject && questionCount && timeMinutes) {
-                  setShowLimitedQuestionsModal(false);
-                  // Fetch questions again with the available count
-                  try {
-                    const questionsResponse = await getPracticeQuestions(
-                      "DLI",
-                      limitedQuestionsData.subject,
-                      limitedQuestionsData.available
-                    );
-                    if (questionsResponse.success && questionsResponse.data) {
-                      await proceedWithPractice(
-                        questionsResponse.data,
-                        limitedQuestionsData.subject,
-                        limitedQuestionsData.available,
-                        timeMinutes
-                      );
-                    }
-                  } catch (error) {
-                    const errorMessage = getApiErrorMessage(error as AxiosError);
-                    alert(`Error: ${errorMessage}`);
-                  }
-                  setLimitedQuestionsData(null);
-                  setStartingExam(false);
-                }
-              }}
-              className="w-full"
-            >
-              Proceed with {limitedQuestionsData?.available} question{limitedQuestionsData?.available !== 1 ? 's' : ''}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowLimitedQuestionsModal(false);
-                setLimitedQuestionsData(null);
-                setStartingExam(false);
-              }}
-              className="w-full"
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </AppLayout>
   );
 };
