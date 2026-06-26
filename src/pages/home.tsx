@@ -7,11 +7,9 @@ import { StreakCarousel } from "@/components/home/StreakCarousel";
 import { AnnouncementBanner } from "@/components/home/AnnouncementBanner";
 import { StatsCards } from "@/components/home/StatsCards";
 import { QuickActionCards } from "@/components/home/QuickActionCards";
-import { RecentPerformance } from "@/components/home/RecentPerformance";
 import { useExamSelection } from "@/contexts/ExamSelectionContext";
 import { useDashboard } from "@/hooks/queries/useDashboard";
-import { Loader2, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Loader2 } from "lucide-react";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -22,8 +20,6 @@ const Home = () => {
   const {
     data: dashboard,
     isLoading: dashboardLoading,
-    isRefetching,
-    refetch,
   } = useDashboard(!!user);
 
   useEffect(() => {

@@ -1,9 +1,14 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui";
 import { Logo } from "@/components/logo";
-import { GraduationCap, BookOpen, Shield } from "lucide-react";
+import { StoreBadge } from "@/components/landing/StoreBadge";
+import { WaitlistModal } from "@/components/landing/WaitlistModal";
+import type { WaitlistPlatform } from "@/apis/waitlist";
 
 const Landing = () => {
+  const [waitlistPlatform, setWaitlistPlatform] = useState<WaitlistPlatform | null>(null);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b border-border/60 px-6 py-4 flex items-center justify-between max-w-6xl mx-auto w-full">
@@ -43,6 +48,11 @@ const Landing = () => {
               <Link to="/authenticate/login">I already have an account</Link>
             </Button>
           </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
+            <StoreBadge platform="ios" onClick={() => setWaitlistPlatform("ios")} />
+            <StoreBadge platform="android" onClick={() => setWaitlistPlatform("android")} />
+          </div>
         </div>
 
   
@@ -61,6 +71,12 @@ const Landing = () => {
           </div>
         </div>
       </footer>
+
+      <WaitlistModal
+        open={waitlistPlatform !== null}
+        platform={waitlistPlatform}
+        onClose={() => setWaitlistPlatform(null)}
+      />
     </div>
   );
 };
