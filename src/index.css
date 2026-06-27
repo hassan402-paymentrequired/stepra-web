@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "antd/dist/reset.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -121,13 +120,26 @@
   body {
     @apply bg-background text-foreground;
   }
-  /* Ensure primary buttons always have visible text (overrides e.g. antd reset) */
+  /* Ensure primary buttons always have visible text */
   [data-slot="button"][data-variant="default"] {
     color: var(--primary-foreground);
   }
 }
 
 @layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  @media (display-mode: standalone) {
+    .browser-only {
+      display: none !important;
+    }
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;

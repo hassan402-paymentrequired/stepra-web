@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import AppLayout from '@/components/layouts/app-layout';
 import { Button } from '@/components/ui';
+import { OptionSheet } from '@/components/ui/option-sheet';
 import { getSubjects, getAvailableYears, startPracticeSession } from '@/apis/exam';
 import { useExamSelection } from '@/contexts/ExamSelectionContext';
+import { useExamRouteSlug } from '@/hooks/useExamRouteSlug';
 import { useSubscriptionGate } from '@/hooks/useSubscriptionGate';
 import { Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils';
@@ -19,8 +21,9 @@ interface SubjectSelection {
 const JAMBPastQuestionsSelection = () => {
   const navigate = useNavigate();
   const { selection, setQuestionCount, setTimeMinutes } = useExamSelection();
-  const examType = selection.examTypeSlug || selection.examType?.toString() || 'JAMB';
-  const examTypeLabel = selection.examTypeName || 'JAMB';
+  const { examTypeSlug, examLabel } = useExamRouteSlug();
+  const examType = examTypeSlug || selection.examTypeSlug || selection.examType?.toString() || 'JAMB';
+  const examTypeLabel = examLabel || selection.examTypeName || 'JAMB';
   const [subjects, setSubjects] = useState<string[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [subjectSelections, setSubjectSelections] = useState<Record<string, SubjectSelection>>({});
@@ -385,67 +388,37 @@ const JAMBPastQuestionsSelection = () => {
         </div>
       </div>
 
-      {/* Year Selection Modal */}
-      {showYearModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end z-50">
-          <div className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="font-semibold">Select Year</h3>
-              <button onClick={() => setShowYearModal(false)}>✕</button>
-            </div>
-            <div className="overflow-y-auto">
-              {loadingYears ? (
-                <div className="flex justify-center p-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : currentSubjectForYear && yearsBySubject[currentSubjectForYear]?.length > 0 ? (
-                yearsBySubject[currentSubjectForYear].map((year) => (
-                  <button
-                    key={year}
-                    onClick={() => selectYear(year)}
-                    className={`w-full p-4 text-left border-b hover:bg-muted ${subjectSelections[currentSubjectForYear]?.year === year
-                        ? 'bg-primary/10'
-                        : ''
-                      }`}
-                  >
-                    {year}
-                  </button>
-                ))
-              ) : (
-                <div className="p-8 text-center text-muted-foreground">
-                  No years available
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <OptionSheet
+        open={showYearModal}
+        onOpenChange={setShowYearModal}
+        title="Select Year"
+        options={(currentSubjectForYear ? yearsBySubject[currentSubjectForYear] ?? [] : []).map((year) => ({
+          value: year,
+          label: String(year),
+        }))}
+        selectedValue={
+          currentSubjectForYear ? subjectSelections[currentSubjectForYear]?.year ?? null : null
+        }
+        onSelect={selectYear}
+        loading={loadingYears}
+        emptyMessage="No years available"
+      />
 
-      {/* Question Count Selection Modal */}
-      {showQuestionCountModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end z-50">
-          <div className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="font-semibold">Select Number of Questions</h3>
-              <button onClick={() => setShowQuestionCountModal(false)}>✕</button>
-            </div>
-            <div className="overflow-y-auto">
-              {questionCountOptions.map((count) => (
-                <button
-                  key={count}
-                  onClick={() => selectQuestionCount(count)}
-                  className={`w-full p-4 text-left border-b hover:bg-muted ${subjectSelections[currentSubjectForQuestionCount || '']?.questionCount === count
-                      ? 'bg-primary/10'
-                      : ''
-                    }`}
-                >
-                  {count}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <OptionSheet
+        open={showQuestionCountModal}
+        onOpenChange={setShowQuestionCountModal}
+        title="Select Number of Questions"
+        options={questionCountOptions.map((count) => ({
+          value: count,
+          label: String(count),
+        }))}
+        selectedValue={
+          currentSubjectForQuestionCount
+            ? subjectSelections[currentSubjectForQuestionCount]?.questionCount ?? null
+            : null
+        }
+        onSelect={selectQuestionCount}
+      />
     </AppLayout>
   );
 };

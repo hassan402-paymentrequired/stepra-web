@@ -2,7 +2,9 @@ import { Suspense } from 'react';
 import { RouterProvider } from 'react-router';
 import AppProvider from './provider';
 import router from './router';
-import { Toaster } from 'sonner';
+import { Toaster } from '@/components/ui/sonner';
+import { ThemeColorMeta } from '@/components/theme/theme-color-meta';
+import { PwaManager } from '@/components/pwa/pwa-manager';
 import { WhatsAppFloat } from '@/components/whatsapp-float';
 
 function App() {
@@ -17,6 +19,8 @@ function App() {
       >
         <RouterProvider router={router} />
       </Suspense>
+      <ThemeColorMeta />
+      <PwaManager />
       <Toaster position="top-right" richColors closeButton />
       <WhatsAppFloat />
     </AppProvider>

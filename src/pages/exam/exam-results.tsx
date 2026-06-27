@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
-import { Modal } from "antd";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import AppLayout from "@/components/layouts/app-layout";
 import { Button } from "@/components/ui";
 import { getExamResults } from "@/apis/exam";
@@ -106,15 +106,15 @@ const ExamResults = () => {
   };
 
   const getGradeColor = (percentage: number) => {
-    if (percentage >= 70) return "text-green-600";
-    if (percentage >= 50) return "text-yellow-600";
-    return "text-red-600";
+    if (percentage >= 70) return "text-emerald-600 dark:text-emerald-400";
+    if (percentage >= 50) return "text-amber-600 dark:text-amber-400";
+    return "text-red-600 dark:text-red-400";
   };
 
   const getGradeBgColor = (percentage: number) => {
-    if (percentage >= 70) return "bg-green-600";
-    if (percentage >= 50) return "bg-yellow-600";
-    return "bg-red-600";
+    if (percentage >= 70) return "bg-emerald-600 dark:bg-emerald-500";
+    if (percentage >= 50) return "bg-amber-600 dark:bg-amber-500";
+    return "bg-red-600 dark:bg-red-500";
   };
 
   const getGradeText = (percentage: number) => {
@@ -238,8 +238,8 @@ const ExamResults = () => {
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-card border rounded-lg p-6 text-center">
                   <div className="flex justify-center mb-2">
-                    <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                      <CheckCircle2 className="h-6 w-6 text-green-600" />
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15">
+                      <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                     </div>
                   </div>
                   <div className="text-2xl font-bold mb-1">{correctCount}</div>
@@ -248,8 +248,8 @@ const ExamResults = () => {
 
                 <div className="bg-card border rounded-lg p-6 text-center">
                   <div className="flex justify-center mb-2">
-                    <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                      <XCircle className="h-6 w-6 text-red-600" />
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/15">
+                      <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
                     </div>
                   </div>
                   <div className="text-2xl font-bold mb-1">{incorrectCount}</div>
@@ -319,34 +319,19 @@ const ExamResults = () => {
       </div>
 
       {/* Subscribe to unlock unlimited practice — shown to non-subscribed users after practice */}
-      <Modal
+      <ConfirmDialog
         open={showSubscribeModal}
-        onCancel={() => setShowSubscribeModal(false)}
-        footer={null}
-        closable={true}
-        width={400}
-        centered
-      >
-        <div className="text-center py-2">
-          <div className="flex justify-center mb-4">
-            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-              <CreditCard className="h-7 w-7 text-primary" />
-            </div>
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Enjoy unlimited practice</h3>
-          <p className="text-muted-foreground text-sm mb-6">
-            Subscribe to unlock more questions per session and practice without limits.
-          </p>
-          <div className="flex flex-col gap-2">
-            <Button onClick={() => { setShowSubscribeModal(false); navigate("/subscription"); }} className="w-full">
-              Subscribe now
-            </Button>
-            <Button variant="outline" onClick={() => setShowSubscribeModal(false)} className="w-full">
-              Maybe later
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        onOpenChange={setShowSubscribeModal}
+        icon={CreditCard}
+        title="Enjoy unlimited practice"
+        description="Subscribe to unlock more questions per session and practice without limits."
+        confirmLabel="Subscribe now"
+        cancelLabel="Maybe later"
+        onConfirm={() => {
+          setShowSubscribeModal(false);
+          navigate("/subscription");
+        }}
+      />
     </AppLayout>
   );
 };

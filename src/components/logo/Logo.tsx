@@ -11,7 +11,14 @@ const Logo: FC<LogoProps> = ({ to = '#', variant = 'logo', ...props }) => {
 
   return (
     <Link to={to} {...linkProps} className={`inline-block ${props.className}`}>
-      <img src={logoUrl} alt="Logo" height={h} width={w}  />
+      <img
+        src={logoUrl}
+        alt="Logo"
+        height={h}
+        width={w}
+        loading="lazy"
+        decoding="async"
+      />
     </Link>
   );
 };

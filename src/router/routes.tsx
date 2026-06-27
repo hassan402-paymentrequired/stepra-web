@@ -1,4 +1,5 @@
 import type { RouteObject } from 'react-router';
+import { Navigate } from 'react-router';
 import {
   Landing,
   PrivacyPolicy,
@@ -81,16 +82,28 @@ const routesObject: RouteObject[] = [
         element: <Home />,
       },
       {
-        path: 'jamb/mode-selection',
+        path: 'exam/:slug/mode-selection',
         element: <JAMBModeSelection />,
       },
       {
-        path: 'jamb/past-questions',
+        path: 'exam/:slug/past-questions',
         element: <JAMBPastQuestionsSelection />,
       },
       {
-        path: 'jamb/practice-questions',
+        path: 'exam/:slug/practice-questions',
         element: <JAMBPracticeQuestionsSelection />,
+      },
+      {
+        path: 'jamb/mode-selection',
+        element: <Navigate to="/exam/jamb/mode-selection" replace />,
+      },
+      {
+        path: 'jamb/past-questions',
+        element: <Navigate to="/exam/jamb/past-questions" replace />,
+      },
+      {
+        path: 'jamb/practice-questions',
+        element: <Navigate to="/exam/jamb/practice-questions" replace />,
       },
       {
         path: 'dli/practice',

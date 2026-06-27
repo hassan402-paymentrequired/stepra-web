@@ -272,14 +272,14 @@ const Subscription = () => {
 
           {/* Error Message if no plan available */}
           {!plan && !loading && !hasActiveSubscription && (
-            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                <Shield className="h-6 w-6 text-yellow-600" />
-                <h3 className="text-xl font-semibold text-yellow-800">
+            <div className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/10 p-6">
+              <div className="mb-2 flex items-center gap-3">
+                <Shield className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                <h3 className="text-xl font-semibold text-amber-950 dark:text-amber-100">
                   No Subscription Plan Available
                 </h3>
               </div>
-              <p className="text-yellow-700">
+              <p className="text-amber-900/90 dark:text-amber-100/90">
                 There are currently no active subscription plans. Please contact support or check back later.
               </p>
             </div>

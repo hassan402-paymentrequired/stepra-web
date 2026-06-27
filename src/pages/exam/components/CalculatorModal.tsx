@@ -181,7 +181,7 @@ export const CalculatorModal = ({
           </button>
           <button
             onClick={onEquals}
-            className="p-4 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition-colors col-span-1"
+            className="col-span-1 rounded-lg bg-primary p-4 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
             =
           </button>

@@ -9,6 +9,7 @@ import {
   type WithdrawalRequest,
 } from "@/apis/referral";
 import { getApiErrorMessage } from "@/utils";
+import { trackEvent } from "@/lib/analytics";
 import {
   Copy,
   Share2,
@@ -79,21 +80,24 @@ const Referral = () => {
   const handleShare = async () => {
     if (!referralData) return;
 
-    const shareText = `Join Exam Prep and earn rewards! Use my referral code: ${referralData.referral_code}\n\n${referralData.referral_url}`;
+    const shareText = `Join Stepra and earn rewards! Use my referral code: ${referralData.referral_code}`;
+    const shareUrl = referralData.referral_url;
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Referral Code",
+          title: "Join Stepra",
           text: shareText,
+          url: shareUrl,
         });
+        trackEvent('referral_share', { method: 'web_share' });
       } catch (error) {
         // User cancelled or error occurred
       }
     } else {
-      // Fallback: copy to clipboard
-      await navigator.clipboard.writeText(shareText);
-      toast.success("Referral code copied to clipboard!");
+      await navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`);
+      trackEvent('referral_share', { method: 'clipboard' });
+      toast.success("Referral link copied to clipboard!");
     }
   };
 

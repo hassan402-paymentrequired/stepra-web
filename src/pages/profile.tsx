@@ -14,18 +14,15 @@ import {
   Mail,
   Lock,
   CheckCircle2,
-  Sun,
-  Moon,
-  Monitor,
 } from "lucide-react";
 import type { AxiosError } from "axios";
-import { useTheme } from "next-themes";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { ProfileNotifications } from "@/components/profile/ProfileNotifications";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { data: user, refetch: refetchUser } = useUser();
-  const { theme, setTheme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -168,9 +165,9 @@ const Profile = () => {
         </div>
 
         {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-green-600" />
-            <span className="text-green-800 font-medium">
+          <div className="mb-6 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            <span className="font-medium text-emerald-950 dark:text-emerald-100">
               Profile updated successfully!
             </span>
           </div>
@@ -262,28 +259,10 @@ const Profile = () => {
             <p className="text-sm text-muted-foreground mb-4">
               Choose how Stepra looks on your device.
             </p>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { value: "light", label: "Light", icon: Sun },
-                { value: "dark", label: "Dark", icon: Moon },
-                { value: "system", label: "Auto", icon: Monitor },
-              ].map(({ value, label, icon: Icon }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setTheme(value)}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-lg border text-sm font-medium transition-colors ${
-                    theme === value
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border hover:border-primary/40"
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                  {label}
-                </button>
-              ))}
-            </div>
+            <ThemeToggle />
           </div>
+
+          <ProfileNotifications />
 
           {/* Account Information */}
           <div className="border rounded-lg p-6 bg-card">
@@ -294,8 +273,8 @@ const Profile = () => {
                 <span
                   className={`font-medium ${
                     user?.email_verified_at
-                      ? "text-green-600"
-                      : "text-yellow-600"
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-amber-600 dark:text-amber-400"
                   }`}
                 >
                   {user?.email_verified_at ? "Verified" : "Not Verified"}

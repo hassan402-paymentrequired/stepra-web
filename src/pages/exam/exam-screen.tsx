@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router";
-import { Modal } from "antd";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui";
 import { submitAnswersBulk, completeExamAttempt } from "@/apis/exam";
 import { recordStreak } from "@/apis/streak";
@@ -19,6 +19,7 @@ import { getApiErrorMessage } from "@/utils";
 import type { AxiosError } from "axios";
 import type { Question } from "@/apis/exam";
 import { toast } from "sonner";
+import { promptPushAfterStreak } from "@/hooks/usePushNotifications";
 import { useScreenshotPrevention } from "@/hooks/useScreenshotPrevention";
 import { useUser } from "@/lib/auth";
 import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
@@ -518,6 +519,7 @@ const ExamScreen = () => {
 
       try {
         await recordStreak();
+        void promptPushAfterStreak();
       } catch {
         // Non-blocking
       }
@@ -582,6 +584,7 @@ const ExamScreen = () => {
       await completeExamAttempt(examSession.attemptId);
       try {
         await recordStreak();
+        void promptPushAfterStreak();
       } catch {
         // Non-blocking
       }
@@ -937,53 +940,28 @@ const ExamScreen = () => {
       />
 
       {/* Confirm Submit Modal */}
-      <Modal
+      <ConfirmDialog
         open={showConfirmSubmitModal}
-        onCancel={() => {
-          setShowConfirmSubmitModal(false);
-        }}
-        footer={null}
-        closable={true}
-        width={400}
-        centered
-      >
-        <div className="text-center py-2">
-          <div className="flex justify-center mb-4">
-            <div className="w-14 h-14 rounded-full bg-yellow-100 flex items-center justify-center">
-              <AlertTriangle className="h-7 w-7 text-yellow-600" />
-            </div>
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Unanswered Questions</h3>
-          <p className="text-muted-foreground text-sm mb-6">
+        onOpenChange={setShowConfirmSubmitModal}
+        icon={AlertTriangle}
+        iconWrapperClassName="bg-yellow-100 dark:bg-yellow-950"
+        iconClassName="text-yellow-600 dark:text-yellow-400"
+        title="Unanswered Questions"
+        description={
+          <>
             You have unanswered questions in {unansweredSubjectsCount}{" "}
             {unansweredSubjectsCount === 1 ? "subject" : "subjects"}.
             <br />
             Are you sure you want to submit?
-          </p>
-          <div className="flex flex-col gap-2">
-            <Button
-              onClick={() => {
-                setShowConfirmSubmitModal(false);
-                proceedWithSubmission();
-              }}
-              className="w-full"
-              disabled={loading}
-            >
-              {loading ? "Submitting..." : "Yes, Submit"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowConfirmSubmitModal(false);
-              }}
-              className="w-full"
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </Modal>
+          </>
+        }
+        confirmLabel={loading ? "Submitting..." : "Yes, Submit"}
+        onConfirm={() => {
+          setShowConfirmSubmitModal(false);
+          proceedWithSubmission();
+        }}
+        loading={loading}
+      />
 
       {/* Question Content */}
       <div className="flex-1 overflow-y-auto p-6 relative" style={{ zIndex: 1 }}>

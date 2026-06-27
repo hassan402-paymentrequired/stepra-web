@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Stepra — Offline</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #fafafa;
+        color: #171717;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background: #171717; color: #fafafa; }
+        .card { background: #262626; border-color: #404040; }
+        .btn { background: #fafafa; color: #171717; }
+      }
+      .card {
+        max-width: 22rem;
+        width: 100%;
+        text-align: center;
+        padding: 2rem 1.5rem;
+        border: 1px solid #e5e5e5;
+        border-radius: 1rem;
+        background: #fff;
+      }
+      img { width: 3rem; height: 3rem; margin-bottom: 1rem; }
+      h1 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+      p { font-size: 0.9375rem; line-height: 1.5; color: #737373; margin-bottom: 1.5rem; }
+      .btn {
+        display: inline-block;
+        padding: 0.625rem 1.25rem;
+        border-radius: 0.5rem;
+        background: #171717;
+        color: #fafafa;
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <img src="/logo/favicon-32x32.png" alt="Stepra" />
+      <h1>You&apos;re offline</h1>
+      <p>
+        Stepra needs an internet connection for practice and your dashboard.
+        Check your connection and try again.
+      </p>
+      <button class="btn" type="button" onclick="window.location.reload()">
+        Try again
+      </button>
+    </div>
+  </body>
+</html>

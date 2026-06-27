@@ -9,7 +9,30 @@ import { StatsCards } from "@/components/home/StatsCards";
 import { QuickActionCards } from "@/components/home/QuickActionCards";
 import { useExamSelection } from "@/contexts/ExamSelectionContext";
 import { useDashboard } from "@/hooks/queries/useDashboard";
-import { Loader2 } from "lucide-react";
+import { MorningStreakBanner } from "@/components/home/MorningStreakBanner";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { RecentPerformance } from "@/components/home/RecentPerformance";
+import { PullToRefresh, RefreshButton } from "@/components/dashboard/pull-to-refresh";
+import { examPath } from "@/lib/exam-routes";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function DashboardSkeleton() {
+  return (
+    <div className="w-full space-y-5 pb-4 md:mx-auto md:max-w-3xl md:pb-8">
+      <Skeleton className="h-36 w-full rounded-2xl" />
+      <Skeleton className="h-20 w-full rounded-xl" />
+      <div className="grid grid-cols-3 gap-3">
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-24 rounded-xl" />
+      </div>
+      <div className="grid gap-3">
+        <Skeleton className="h-28 rounded-xl" />
+        <Skeleton className="h-28 rounded-xl" />
+      </div>
+    </div>
+  );
+}
 
 const Home = () => {
   const navigate = useNavigate();
@@ -20,7 +43,11 @@ const Home = () => {
   const {
     data: dashboard,
     isLoading: dashboardLoading,
+    refetch: refetchDashboard,
+    isFetching: isDashboardFetching,
   } = useDashboard(!!user);
+
+  const { enable: enablePush, settings: pushSettings } = usePushNotifications();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -42,15 +69,15 @@ const Home = () => {
     if (category.flow_type === "departmental") {
       navigate("/unilag/departments");
     } else {
-      navigate("/jamb/mode-selection");
+      navigate(examPath(category.slug, "mode-selection"));
     }
   };
 
   if (authLoading || dashboardLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <AppLayout>
+        <DashboardSkeleton />
+      </AppLayout>
     );
   }
 
@@ -60,9 +87,27 @@ const Home = () => {
     (a) => a.id !== dismissedAnnouncementId
   );
 
+  const today = new Date().toISOString().slice(0, 10);
+  const practicedToday = dashboard?.streak?.all_streaks?.includes(today) ?? false;
+
   return (
     <AppLayout>
-      <div className="w-full max-w-3xl mx-auto space-y-5 pb-8">
+      <PullToRefresh onRefresh={() => refetchDashboard()} disabled={dashboardLoading}>
+        <div className="w-full md:max-w-3xl md:mx-auto space-y-5 pb-4 md:pb-8">
+          <div className="flex items-center justify-between md:hidden">
+            <h1 className="text-lg font-semibold">Dashboard</h1>
+            <RefreshButton
+              onRefresh={() => refetchDashboard()}
+              isRefreshing={isDashboardFetching}
+            />
+          </div>
+
+        <MorningStreakBanner
+          currentStreak={dashboard?.streak?.current_streak ?? 0}
+          practicedToday={practicedToday}
+          pushEnabled={pushSettings?.push_notifications_enabled ?? true}
+          onEnablePush={() => void enablePush()}
+        />
 
         {dashboard?.streak && (
           <StreakCarousel currentStreak={dashboard.streak.current_streak} />
@@ -99,7 +144,14 @@ const Home = () => {
           </div>
         )}
 
-      </div>
+        {dashboard?.analytics?.recent_attempts?.length ? (
+          <RecentPerformance
+            attempts={dashboard.analytics.recent_attempts.slice(0, 5)}
+          />
+        ) : null}
+
+        </div>
+      </PullToRefresh>
     </AppLayout>
   );
 };

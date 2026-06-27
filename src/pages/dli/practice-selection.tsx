@@ -2,13 +2,13 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import AppLayout from "@/components/layouts/app-layout";
 import { Button } from "@/components/ui";
+import { OptionSheet } from "@/components/ui/option-sheet";
 import {
   getSubjects,
   startPracticeSession,
 } from "@/apis/exam";
 import { useSubscriptionGate } from "@/hooks/useSubscriptionGate";
 import {
-  Check,
   ChevronDown,
   AlertCircle,
 } from "lucide-react";
@@ -161,10 +161,10 @@ const DLIPracticeSelection = () => {
               random questions.
             </p>
             {!hasActiveSubscription && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                  <p className="text-sm text-yellow-800">
+                  <AlertCircle className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  <p className="text-sm text-amber-950 dark:text-amber-100">
                     Non-subscribed users are limited to 5 questions per practice
                     session. Subscribe to unlock up to 50 questions per session.
                   </p>
@@ -307,109 +307,43 @@ const DLIPracticeSelection = () => {
         </div>
       </div>
 
-      {/* Subject Selection Modal */}
-      {showSubjectModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end z-50">
-          <div className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="font-semibold">Select Course</h3>
-              <button onClick={() => setShowSubjectModal(false)}>✕</button>
-            </div>
-            <div className="overflow-y-auto">
-              {subjects.length > 0 ? (
-                subjects.map((subject) => (
-                  <button
-                    key={subject}
-                    onClick={() => {
-                      setSelectedSubject(subject);
-                      setQuestionCount(null);
-                      setTimeMinutes(null);
-                      setShowSubjectModal(false);
-                    }}
-                    className={`w-full p-4 text-left border-b hover:bg-muted ${selectedSubject === subject ? "bg-primary/10" : ""
-                      }`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span>{subject}</span>
-                      {selectedSubject === subject && (
-                        <Check className="h-5 w-5 text-primary" />
-                      )}
-                    </div>
-                  </button>
-                ))
-              ) : (
-                <div className="p-8 text-center text-muted-foreground">
-                  No courses available
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <OptionSheet
+        open={showSubjectModal}
+        onOpenChange={setShowSubjectModal}
+        title="Select Course"
+        options={subjects.map((subject) => ({ value: subject, label: subject }))}
+        selectedValue={selectedSubject}
+        onSelect={(subject) => {
+          setSelectedSubject(subject);
+          setQuestionCount(null);
+          setTimeMinutes(null);
+        }}
+        emptyMessage="No courses available"
+      />
 
-      {/* Question Count Selection Modal */}
-      {showQuestionCountModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end z-50">
-          <div className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="font-semibold">Select Number of Questions</h3>
-              <button onClick={() => setShowQuestionCountModal(false)}>✕</button>
-            </div>
-            <div className="overflow-y-auto">
-              {questionCountOptions.map((count) => (
-                <button
-                  key={count}
-                  onClick={() => {
-                    setQuestionCount(count);
-                    setShowQuestionCountModal(false);
-                  }}
-                  className={`w-full p-4 text-left border-b hover:bg-muted ${questionCount === count ? "bg-primary/10" : ""
-                    }`}
-                >
-                  <div className="flex justify-between items-center">
-                    <span>{count}</span>
-                    {questionCount === count && (
-                      <Check className="h-5 w-5 text-primary" />
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <OptionSheet
+        open={showQuestionCountModal}
+        onOpenChange={setShowQuestionCountModal}
+        title="Select Number of Questions"
+        options={questionCountOptions.map((count) => ({
+          value: count,
+          label: String(count),
+        }))}
+        selectedValue={questionCount}
+        onSelect={setQuestionCount}
+      />
 
-      {/* Time Selection Modal */}
-      {showTimeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end z-50">
-          <div className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="font-semibold">Select Time (Minutes)</h3>
-              <button onClick={() => setShowTimeModal(false)}>✕</button>
-            </div>
-            <div className="overflow-y-auto">
-              {timeOptions.map((minutes) => (
-                <button
-                  key={minutes}
-                  onClick={() => {
-                    setTimeMinutes(minutes);
-                    setShowTimeModal(false);
-                  }}
-                  className={`w-full p-4 text-left border-b hover:bg-muted ${timeMinutes === minutes ? "bg-primary/10" : ""
-                    }`}
-                >
-                  <div className="flex justify-between items-center">
-                    <span>{minutes}</span>
-                    {timeMinutes === minutes && (
-                      <Check className="h-5 w-5 text-primary" />
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <OptionSheet
+        open={showTimeModal}
+        onOpenChange={setShowTimeModal}
+        title="Select Time (Minutes)"
+        options={timeOptions.map((minutes) => ({
+          value: minutes,
+          label: `${minutes} minute${minutes !== 1 ? "s" : ""}`,
+        }))}
+        selectedValue={timeMinutes}
+        onSelect={setTimeMinutes}
+      />
 
     </AppLayout>
   );

@@ -114,10 +114,10 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
         height: 100vh;
         pointer-events: none;
         z-index: 9999;
-        opacity: 0.03;
+        opacity: 0.04;
         font-size: 24px;
         font-weight: bold;
-        color: #000;
+        color: var(--foreground);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -157,10 +157,10 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
           ${horizontal}: 10px;
           pointer-events: none;
           z-index: 10000;
-          opacity: 0.08;
+          opacity: 0.1;
           font-size: 12px;
           font-weight: 600;
-          color: #666;
+          color: var(--muted-foreground);
           transform: rotate(${index * 90}deg);
           user-select: none;
           font-family: monospace;

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui";
 import { Logo } from "@/components/logo";
 import { StoreBadge } from "@/components/landing/StoreBadge";
 import { WaitlistModal } from "@/components/landing/WaitlistModal";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import type { WaitlistPlatform } from "@/apis/waitlist";
 
 const Landing = () => {
@@ -18,7 +19,8 @@ const Landing = () => {
             Stepra
           </Link>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <ThemeToggle variant="compact" />
           <Button variant="outline" asChild className="h-9">
             <Link to="/authenticate/login">Log in</Link>
           </Button>

@@ -3,18 +3,20 @@ import AppLayout from "@/components/layouts/app-layout";
 import { FileText, BookOpen, ArrowRight } from "lucide-react";
 
 import { useExamSelection } from "@/contexts/ExamSelectionContext";
+import { useExamRouteSlug } from "@/hooks/useExamRouteSlug";
+import { examPath } from "@/lib/exam-routes";
 
 const JAMBModeSelection = () => {
   const navigate = useNavigate();
-  const { selection, setQuestionMode } = useExamSelection();
-  const examLabel = selection.examTypeName || "JAMB";
+  const { setQuestionMode } = useExamSelection();
+  const { examTypeSlug, examLabel } = useExamRouteSlug();
 
   const handleSelectMode = (mode: "past_question" | "practice") => {
     setQuestionMode(mode);
     if (mode === "past_question") {
-      navigate("/jamb/past-questions");
+      navigate(examPath(examTypeSlug, "past-questions"));
     } else {
-      navigate("/jamb/practice-questions");
+      navigate(examPath(examTypeSlug, "practice-questions"));
     }
   };
 

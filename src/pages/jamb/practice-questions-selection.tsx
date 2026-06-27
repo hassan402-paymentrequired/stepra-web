@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import AppLayout from '@/components/layouts/app-layout';
 import { Button } from '@/components/ui';
+import { OptionSheet } from '@/components/ui/option-sheet';
 import { getSubjects, startPracticeSession } from '@/apis/exam';
 import { useExamSelection } from '@/contexts/ExamSelectionContext';
+import { useExamRouteSlug } from '@/hooks/useExamRouteSlug';
 import { useSubscriptionGate } from '@/hooks/useSubscriptionGate';
 import { Check, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils';
@@ -13,8 +15,9 @@ import { toast } from 'sonner';
 const JAMBPracticeQuestionsSelection = () => {
   const navigate = useNavigate();
   const { selection, setQuestionCount, setTimeMinutes } = useExamSelection();
-  const examType = selection.examTypeSlug || selection.examType?.toString() || 'JAMB';
-  const examTypeLabel = selection.examTypeName || 'JAMB';
+  const { examTypeSlug, examLabel } = useExamRouteSlug();
+  const examType = examTypeSlug || selection.examTypeSlug || selection.examType?.toString() || 'JAMB';
+  const examTypeLabel = examLabel || selection.examTypeName || 'JAMB';
 
   // Core state
   const [subjects, setSubjects] = useState<string[]>([]);
@@ -261,12 +264,12 @@ const JAMBPracticeQuestionsSelection = () => {
             </p>
 
             {!hasActiveSubscription && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
                   <div>
-                    <p className="text-sm font-medium text-yellow-800">Limited Practice Mode</p>
-                    <p className="text-xs text-yellow-700 mt-1">
+                    <p className="text-sm font-medium text-amber-950 dark:text-amber-100">Limited Practice Mode</p>
+                    <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-100/80">
                       Free users can practice up to 5 questions per subject. Subscribe to unlock up to 100 questions per subject.
                     </p>
                   </div>
@@ -416,51 +419,32 @@ const JAMBPracticeQuestionsSelection = () => {
         </div>
       </div>
 
-      {/* Question Count Selection Modal */}
-      {showQuestionCountModal && currentSubjectForQuestionCount && (
-        <div className="fixed inset-0 bg-black/50 flex items-end z-50" onClick={() => setShowQuestionCountModal(false)}>
-          <div
-            className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center p-4 border-b">
-              <div>
-                <h3 className="font-semibold">Select Number of Questions</h3>
-                <p className="text-sm text-muted-foreground">for {currentSubjectForQuestionCount}</p>
-              </div>
-              <button
-                onClick={() => setShowQuestionCountModal(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="overflow-y-auto">
-              {questionCountOptions.map((optionCount) => {
-                const isSelected = questionCounts[currentSubjectForQuestionCount] === optionCount;
-                return (
-                  <button
-                    key={optionCount}
-                    onClick={() => selectQuestionCount(optionCount)}
-                    className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${isSelected ? 'bg-primary/10 border-primary' : ''
-                      }`}
-                  >
-                    <span className="font-medium">{optionCount} question{optionCount !== 1 ? 's' : ''}</span>
-                    {isSelected && <Check className="h-5 w-5 text-primary" />}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="p-4 border-t bg-muted/30">
-              <p className="text-xs text-muted-foreground">
-                {hasActiveSubscription
-                  ? 'Premium: Up to 100 questions per subject'
-                  : 'Free: Up to 5 questions per subject'}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <OptionSheet
+        open={showQuestionCountModal && !!currentSubjectForQuestionCount}
+        onOpenChange={(open) => {
+          setShowQuestionCountModal(open);
+          if (!open) setCurrentSubjectForQuestionCount(null);
+        }}
+        title="Select Number of Questions"
+        subtitle={currentSubjectForQuestionCount ? `for ${currentSubjectForQuestionCount}` : undefined}
+        options={questionCountOptions.map((count) => ({
+          value: count,
+          label: `${count} question${count !== 1 ? 's' : ''}`,
+        }))}
+        selectedValue={
+          currentSubjectForQuestionCount
+            ? questionCounts[currentSubjectForQuestionCount] ?? null
+            : null
+        }
+        onSelect={selectQuestionCount}
+        footer={
+          <p className="text-xs text-muted-foreground">
+            {hasActiveSubscription
+              ? 'Premium: Up to 100 questions per subject'
+              : 'Free: Up to 5 questions per subject'}
+          </p>
+        }
+      />
 
     </AppLayout>
   );

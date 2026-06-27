@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import AppLayout from "@/components/layouts/app-layout";
 import { Button } from "@/components/ui";
+import { OptionSheet } from "@/components/ui/option-sheet";
 import {
   getDepartmentSubjects,
   startPracticeSession,
@@ -9,7 +10,6 @@ import {
 import { useUser } from "@/lib/auth";
 import { useSubscriptionGate } from "@/hooks/useSubscriptionGate";
 import {
-  Check,
   ChevronDown,
   AlertCircle,
   Loader2,
@@ -184,8 +184,8 @@ const UnilagDepartmentSubjects = () => {
     return (
       <AppLayout>
         <div className="w-full max-w-3xl mx-auto">
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800">{error}</p>
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+            <p className="text-red-800 dark:text-red-200">{error}</p>
             <div className="flex gap-2 mt-4">
               <Button
                 onClick={loadSubjects}
@@ -219,10 +219,10 @@ const UnilagDepartmentSubjects = () => {
               random questions.
             </p>
             {!hasActiveSubscription && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                  <p className="text-sm text-yellow-800">
+                  <AlertCircle className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  <p className="text-sm text-amber-950 dark:text-amber-100">
                     Non-subscribed users are limited to 5 questions per practice
                     session. Subscribe to unlock up to 50 questions per session.
                   </p>
@@ -318,207 +318,76 @@ const UnilagDepartmentSubjects = () => {
               </Button>
             )}
 
-          {/* Subject Selection Modal */}
-          {showSubjectModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-end z-50" onClick={() => setShowSubjectModal(false)}>
-              <div
-                className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex justify-between items-center p-4 border-b">
-                  <h3 className="font-semibold">Select Course</h3>
-                  <button
-                    onClick={() => setShowSubjectModal(false)}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="overflow-y-auto">
-                  {subjects.length > 0 ? (
-                    subjects.map((subject) => {
-                      const isSelected = selectedSubject === subject.name;
-                      return (
-                        <button
-                          key={subject.id}
-                          onClick={() => {
-                            setSelectedSubject(subject.name);
-                            setSelectedTestId(null);
-                            setQuestionCount(null);
-                            setTimeMinutes(null);
-                            setShowSubjectModal(false);
-                          }}
-                          className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${isSelected ? 'bg-primary/10 border-primary' : ''
-                            }`}
-                        >
-                          <span className="font-medium">{subject.name}</span>
-                          {isSelected && <Check className="h-5 w-5 text-primary" />}
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="p-4 text-center">
-                      <p className="text-muted-foreground">No subjects available.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          <OptionSheet
+            open={showSubjectModal}
+            onOpenChange={setShowSubjectModal}
+            title="Select Course"
+            options={subjects.map((subject) => ({
+              value: subject.name,
+              label: subject.name,
+            }))}
+            selectedValue={selectedSubject}
+            onSelect={(name) => {
+              setSelectedSubject(name);
+              setSelectedTestId(null);
+              setQuestionCount(null);
+              setTimeMinutes(null);
+            }}
+            emptyMessage="No subjects available."
+          />
 
-          {/* Test Selection Modal */}
-          {showTestModal && (
-            <div
-              className="fixed inset-0 bg-black/50 flex items-end z-50"
-              onClick={() => setShowTestModal(false)}
-            >
-              <div
-                className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex justify-between items-center p-4 border-b">
-                  <div>
-                    <h3 className="font-semibold">Select Test</h3>
-                    {selectedSubject && (
-                      <p className="text-sm text-muted-foreground">
-                        for {selectedSubject}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setShowTestModal(false)}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="overflow-y-auto">
-                  {testsForSubject.length > 0 ? (
-                    testsForSubject.map((test) => {
-                      const isSelected = selectedTestId === test.id;
-                      return (
-                        <button
-                          key={test.id}
-                          onClick={() => {
-                            setSelectedTestId(test.id);
-                            setQuestionCount(null);
-                            setTimeMinutes(null);
-                            setShowTestModal(false);
-                          }}
-                          className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${isSelected
-                              ? "bg-primary/10 border-primary"
-                              : ""
-                            }`}
-                        >
-                          <span className="font-medium">{test.name}</span>
-                          {isSelected && (
-                            <Check className="h-5 w-5 text-primary" />
-                          )}
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="p-4 text-center">
-                      <p className="text-muted-foreground">
-                        No tests available for this subject.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          <OptionSheet
+            open={showTestModal}
+            onOpenChange={setShowTestModal}
+            title="Select Test"
+            subtitle={selectedSubject ? `for ${selectedSubject}` : undefined}
+            options={testsForSubject.map((test) => ({
+              value: test.id,
+              label: test.name,
+            }))}
+            selectedValue={selectedTestId}
+            onSelect={(testId) => {
+              setSelectedTestId(testId);
+              setQuestionCount(null);
+              setTimeMinutes(null);
+            }}
+            emptyMessage="No tests available for this subject."
+          />
 
-          {/* Question Count Selection Modal */}
-          {showQuestionCountModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-end z-50" onClick={() => setShowQuestionCountModal(false)}>
-              <div
-                className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex justify-between items-center p-4 border-b">
-                  <div>
-                    <h3 className="font-semibold">Select Number of Questions</h3>
-                    {selectedSubject && (
-                      <p className="text-sm text-muted-foreground">for {selectedSubject}</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setShowQuestionCountModal(false)}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="overflow-y-auto">
-                  {questionCountOptions.map((count) => {
-                    const isSelected = questionCount === count;
-                    return (
-                      <button
-                        key={count}
-                        onClick={() => {
-                          setQuestionCount(count);
-                          setTimeMinutes(null);
-                          setShowQuestionCountModal(false);
-                        }}
-                        className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${isSelected ? 'bg-primary/10 border-primary' : ''
-                          }`}
-                      >
-                        <span className="font-medium">{count} question{count !== 1 ? 's' : ''}</span>
-                        {isSelected && <Check className="h-5 w-5 text-primary" />}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="p-4 border-t bg-muted/30">
-                  <p className="text-xs text-muted-foreground">
-                    {hasActiveSubscription
-                      ? 'Premium: Up to 50 questions per session'
-                      : 'Free: Up to 5 questions per session'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          <OptionSheet
+            open={showQuestionCountModal}
+            onOpenChange={setShowQuestionCountModal}
+            title="Select Number of Questions"
+            subtitle={selectedSubject ? `for ${selectedSubject}` : undefined}
+            options={questionCountOptions.map((count) => ({
+              value: count,
+              label: `${count} question${count !== 1 ? "s" : ""}`,
+            }))}
+            selectedValue={questionCount}
+            onSelect={(count) => {
+              setQuestionCount(count);
+              setTimeMinutes(null);
+            }}
+            footer={
+              <p className="text-xs text-muted-foreground">
+                {hasActiveSubscription
+                  ? "Premium: Up to 50 questions per session"
+                  : "Free: Up to 5 questions per session"}
+              </p>
+            }
+          />
 
-          {/* Time Selection Modal */}
-          {showTimeModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-end z-50" onClick={() => setShowTimeModal(false)}>
-              <div
-                className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex justify-between items-center p-4 border-b">
-                  <h3 className="font-semibold">Select Time (Minutes)</h3>
-                  <button
-                    onClick={() => setShowTimeModal(false)}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="overflow-y-auto">
-                  {timeOptions.map((minutes) => {
-                    const isSelected = timeMinutes === minutes;
-                    return (
-                      <button
-                        key={minutes}
-                        onClick={() => {
-                          setTimeMinutes(minutes);
-                          setShowTimeModal(false);
-                        }}
-                        className={`w-full p-4 text-left border-b hover:bg-muted transition-colors flex items-center justify-between ${isSelected ? 'bg-primary/10 border-primary' : ''
-                          }`}
-                      >
-                        <span className="font-medium">{minutes} minute{minutes !== 1 ? 's' : ''}</span>
-                        {isSelected && <Check className="h-5 w-5 text-primary" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
+          <OptionSheet
+            open={showTimeModal}
+            onOpenChange={setShowTimeModal}
+            title="Select Time (Minutes)"
+            options={timeOptions.map((minutes) => ({
+              value: minutes,
+              label: `${minutes} minute${minutes !== 1 ? "s" : ""}`,
+            }))}
+            selectedValue={timeMinutes}
+            onSelect={setTimeMinutes}
+          />
 
         </div>
       </div>
