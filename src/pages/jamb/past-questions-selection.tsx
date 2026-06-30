@@ -8,6 +8,7 @@ import { useExamSelection } from '@/contexts/ExamSelectionContext';
 import { useExamRouteSlug } from '@/hooks/useExamRouteSlug';
 import { useSubscriptionGate } from '@/hooks/useSubscriptionGate';
 import { Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { EmptyStateCard } from '@/components/empty-state/EmptyStateCard';
 import { getApiErrorMessage } from '@/utils';
 import type { AxiosError } from 'axios';
 import { toast } from 'sonner';
@@ -36,22 +37,27 @@ const JAMBPastQuestionsSelection = () => {
   const [currentSubjectForYear, setCurrentSubjectForYear] = useState<string | null>(null);
   const [currentSubjectForQuestionCount, setCurrentSubjectForQuestionCount] = useState<string | null>(null);
   const [startingExam, setStartingExam] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { hasActiveSubscription, maxQuestionsPerSubject } = useSubscriptionGate();
   const questionCountOptions = Array.from({ length: maxQuestionsPerSubject }, (_, i) => i + 1);
 
   useEffect(() => {
     loadSubjects();
-  }, []);
+  }, [examType]);
 
   const loadSubjects = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const response = await getSubjects(examType, 'past_question');
-      if (response.success) {
-        setSubjects(response.data);
+      if (!response.success) {
+        throw new Error('Failed to load subjects');
       }
+      setSubjects(response.data ?? []);
     } catch (error) {
       console.error('Error loading subjects:', error);
+      setLoadError(getApiErrorMessage(error as AxiosError));
+      toast.error('Failed to load subjects. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -236,8 +242,38 @@ const JAMBPastQuestionsSelection = () => {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-full">
+        <div className="flex flex-col items-center justify-center h-full gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading {examTypeLabel} past question subjects...</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <AppLayout>
+        <div className="max-w-md mx-auto">
+          <EmptyStateCard
+            kind="load-error"
+            errorMessage={loadError}
+            onRetry={loadSubjects}
+          />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (subjects.length === 0) {
+    return (
+      <AppLayout>
+        <div className="max-w-md mx-auto">
+          <EmptyStateCard
+            kind="no-subjects"
+            context={{ examTypeName: examTypeLabel, mode: 'past_question' }}
+            onRetry={loadSubjects}
+            secondaryAction={{ label: 'Back to dashboard', href: '/' }}
+          />
         </div>
       </AppLayout>
     );

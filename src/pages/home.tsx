@@ -15,6 +15,8 @@ import { RecentPerformance } from "@/components/home/RecentPerformance";
 import { PullToRefresh, RefreshButton } from "@/components/dashboard/pull-to-refresh";
 import { examPath } from "@/lib/exam-routes";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyStateCard } from "@/components/empty-state/EmptyStateCard";
+import { getApiErrorMessage } from "@/utils";
 
 function DashboardSkeleton() {
   return (
@@ -43,6 +45,8 @@ const Home = () => {
   const {
     data: dashboard,
     isLoading: dashboardLoading,
+    isError: dashboardError,
+    error: dashboardErrorDetail,
     refetch: refetchDashboard,
     isFetching: isDashboardFetching,
   } = useDashboard(!!user);
@@ -82,6 +86,20 @@ const Home = () => {
   }
 
   if (!user) return null;
+
+  if (dashboardError) {
+    return (
+      <AppLayout>
+        <div className="md:max-w-3xl md:mx-auto">
+          <EmptyStateCard
+            kind="load-error"
+            errorMessage={getApiErrorMessage(dashboardErrorDetail)}
+            onRetry={() => void refetchDashboard()}
+          />
+        </div>
+      </AppLayout>
+    );
+  }
 
   const activeAnnouncement = dashboard?.announcements.find(
     (a) => a.id !== dismissedAnnouncementId
@@ -139,9 +157,11 @@ const Home = () => {
             onCategoryPress={handleCategoryPress}
           />
         ) : (
-          <div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
-            No practice categories available right now.
-          </div>
+          <EmptyStateCard
+            kind="no-categories"
+            compact
+            onRetry={() => void refetchDashboard()}
+          />
         )}
 
         {dashboard?.analytics?.recent_attempts?.length ? (

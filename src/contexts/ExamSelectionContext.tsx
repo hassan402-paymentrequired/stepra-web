@@ -10,6 +10,7 @@ import {
   getStoredExamSelection,
   clearStoredExamSelection,
 } from '@/lib/exam-selection-storage';
+import { isJambExamSlug } from '@/lib/exam-routes';
 
 export type ExamType = string | number | null;
 export type QuestionMode = 'past_question' | 'practice' | null;
@@ -105,7 +106,7 @@ export function ExamSelectionProvider({ children }: { children: ReactNode }) {
 
   const setSubjects = useCallback((subjects: string[]) => {
     setSelection((prev) => {
-      const maxSubjects = prev.examTypeSlug === 'JAMB' ? 4 : 1;
+      const maxSubjects = isJambExamSlug(prev.examTypeSlug) ? 4 : 1;
       const limitedSubjects = subjects.slice(0, maxSubjects);
       const newQuestionCounts = { ...prev.questionCounts };
 
@@ -125,7 +126,7 @@ export function ExamSelectionProvider({ children }: { children: ReactNode }) {
 
   const addSubject = useCallback((subject: string) => {
     setSelection((prev) => {
-      const maxSubjects = prev.examTypeSlug === 'JAMB' ? 4 : 1;
+      const maxSubjects = isJambExamSlug(prev.examTypeSlug) ? 4 : 1;
       if (prev.subjects.includes(subject) || prev.subjects.length >= maxSubjects) {
         return prev;
       }
@@ -170,7 +171,7 @@ export function ExamSelectionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const getMaxSubjects = useCallback((): number => {
-    return selection.examTypeSlug === 'JAMB' ? 4 : 1;
+    return isJambExamSlug(selection.examTypeSlug) ? 4 : 1;
   }, [selection.examTypeSlug]);
 
   const canAddMoreSubjects = useCallback((): boolean => {

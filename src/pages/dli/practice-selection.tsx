@@ -11,7 +11,9 @@ import { useSubscriptionGate } from "@/hooks/useSubscriptionGate";
 import {
   ChevronDown,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
+import { EmptyStateCard } from "@/components/empty-state/EmptyStateCard";
 import { getApiErrorMessage } from "@/utils";
 import type { AxiosError } from "axios";
 import { toast } from "sonner";
@@ -23,6 +25,7 @@ const DLIPracticeSelection = () => {
   const [questionCount, setQuestionCount] = useState<number | null>(null);
   const [timeMinutes, setTimeMinutes] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [startingExam, setStartingExam] = useState(false);
   const [showSubjectModal, setShowSubjectModal] = useState(false);
   const [showQuestionCountModal, setShowQuestionCountModal] = useState(false);
@@ -42,17 +45,17 @@ const DLIPracticeSelection = () => {
   const loadSubjects = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const response = await getSubjects("DLI", "practice");
 
-      if (response.success && response.data) {
-        setSubjects(response.data);
-        if (response.data.length === 0) {
-          toast.error("No DLI practice courses are available at the moment.");
-        }
+      if (!response.success) {
+        throw new Error("Failed to load courses");
       }
+
+      setSubjects(response.data ?? []);
     } catch (error) {
-      const errorMessage = getApiErrorMessage(error as AxiosError);
-      toast.error(`Error: ${errorMessage}`);
+      setLoadError(getApiErrorMessage(error as AxiosError));
+      toast.error("Failed to load courses. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -142,8 +145,38 @@ const DLIPracticeSelection = () => {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-full">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" />
+        <div className="flex flex-col items-center justify-center h-full gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading DLI practice courses...</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <AppLayout>
+        <div className="max-w-md mx-auto">
+          <EmptyStateCard
+            kind="load-error"
+            errorMessage={loadError}
+            onRetry={loadSubjects}
+          />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (subjects.length === 0) {
+    return (
+      <AppLayout>
+        <div className="max-w-md mx-auto">
+          <EmptyStateCard
+            kind="no-subjects"
+            context={{ examTypeName: "DLI", mode: "practice" }}
+            onRetry={loadSubjects}
+            secondaryAction={{ label: "Back to dashboard", href: "/" }}
+          />
         </div>
       </AppLayout>
     );
@@ -180,11 +213,10 @@ const DLIPracticeSelection = () => {
             </label>
             <button
               onClick={() => setShowSubjectModal(true)}
-              disabled={subjects.length === 0}
               className={`w-full border-2 rounded-md p-3 flex items-center justify-between hover:border-primary transition-colors ${selectedSubject
                 ? "border-primary"
                 : "border-border"
-                } ${subjects.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                }`}
             >
               <span
                 className={
@@ -195,11 +227,6 @@ const DLIPracticeSelection = () => {
               </span>
               <ChevronDown className="h-4 w-4" />
             </button>
-            {subjects.length === 0 && (
-              <p className="text-sm text-muted-foreground mt-1">
-                No courses available for DLI practice
-              </p>
-            )}
           </div>
 
           {/* Number of Questions Selection */}

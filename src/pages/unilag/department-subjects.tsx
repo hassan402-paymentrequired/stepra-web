@@ -13,8 +13,8 @@ import {
   ChevronDown,
   AlertCircle,
   Loader2,
-  ArrowLeft,
 } from "lucide-react";
+import { EmptyStateCard } from "@/components/empty-state/EmptyStateCard";
 import { getApiErrorMessage } from "@/utils";
 import type { AxiosError } from "axios";
 import { useExamSelection } from "@/contexts/ExamSelectionContext";
@@ -38,7 +38,8 @@ const UnilagDepartmentSubjects = () => {
   const [showQuestionCountModal, setShowQuestionCountModal] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
   const { hasActiveSubscription, maxQuestionsPerSubject } = useSubscriptionGate({ premiumLimit: 50 });
-  const [error, setError] = useState<string | null>(null);
+  const examLabel = selection.examTypeName || "UNILAG";
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const selectedSubjectData = subjects.find((s) => s.name === selectedSubject);
   const testsForSubject = selectedSubjectData?.tests ?? [];
@@ -68,18 +69,16 @@ const UnilagDepartmentSubjects = () => {
 
     try {
       setLoading(true);
-      setError(null);
+      setLoadError(null);
       const response = await getDepartmentSubjects(parseInt(departmentId), examType as 'DLI' | 'UNILAG');
 
-      if (response.success && response.data) {
-        setSubjects(response.data);
-        if (response.data.length === 0) {
-          setError("No subjects are available for this department at the moment.");
-        }
+      if (!response.success) {
+        throw new Error("Failed to load subjects");
       }
+
+      setSubjects(response.data ?? []);
     } catch (err) {
-      const errorMessage = getApiErrorMessage(err as AxiosError);
-      setError(`Error: ${errorMessage}`);
+      setLoadError(getApiErrorMessage(err as AxiosError));
     } finally {
       setLoading(false);
     }
@@ -180,28 +179,37 @@ const UnilagDepartmentSubjects = () => {
     );
   }
 
-  if (error) {
+  if (loadError) {
     return (
       <AppLayout>
-        <div className="w-full max-w-3xl mx-auto">
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-            <p className="text-red-800 dark:text-red-200">{error}</p>
-            <div className="flex gap-2 mt-4">
-              <Button
-                onClick={loadSubjects}
-                variant="outline"
-              >
-                Try Again
-              </Button>
-              <Button
-                onClick={() => navigate("/unilag/departments")}
-                variant="outline"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Departments
-              </Button>
-            </div>
-          </div>
+        <div className="max-w-md mx-auto">
+          <EmptyStateCard
+            kind="load-error"
+            errorMessage={loadError}
+            onRetry={loadSubjects}
+            secondaryAction={{
+              label: "Back to departments",
+              onClick: () => navigate("/unilag/departments"),
+            }}
+          />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (subjects.length === 0) {
+    return (
+      <AppLayout>
+        <div className="max-w-md mx-auto">
+          <EmptyStateCard
+            kind="no-department-subjects"
+            context={{ examTypeName: examLabel }}
+            onRetry={loadSubjects}
+            secondaryAction={{
+              label: "Back to departments",
+              onClick: () => navigate("/unilag/departments"),
+            }}
+          />
         </div>
       </AppLayout>
     );

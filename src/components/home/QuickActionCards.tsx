@@ -1,15 +1,11 @@
-import { ChevronRight, BookOpen, GraduationCap, School } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { ExamCategory } from "@/apis/exam-categories";
+import { getExamCategoryIcon } from "@/lib/exam-category-icons";
 
 interface QuickActionCardsProps {
   categories: ExamCategory[];
   onCategoryPress: (category: ExamCategory) => void;
 }
-
-const iconMap: Record<string, typeof BookOpen> = {
-  school: GraduationCap,
-  "menu-book": BookOpen,
-};
 
 const iconThemes = [
   { bg: "bg-violet-100", color: "text-violet-700" },
@@ -27,7 +23,7 @@ export function QuickActionCards({ categories, onCategoryPress }: QuickActionCar
       <div className="rounded-lg border bg-card overflow-hidden divide-y">
         {categories.map((category, index) => {
           const theme = iconThemes[index % iconThemes.length];
-          const Icon = iconMap[category.icon_name] ?? School;
+          const Icon = getExamCategoryIcon(category);
 
           return (
             <button

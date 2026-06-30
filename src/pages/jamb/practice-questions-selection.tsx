@@ -8,6 +8,7 @@ import { useExamSelection } from '@/contexts/ExamSelectionContext';
 import { useExamRouteSlug } from '@/hooks/useExamRouteSlug';
 import { useSubscriptionGate } from '@/hooks/useSubscriptionGate';
 import { Check, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';
+import { EmptyStateCard } from '@/components/empty-state/EmptyStateCard';
 import { getApiErrorMessage } from '@/utils';
 import type { AxiosError } from 'axios';
 import { toast } from 'sonner';
@@ -32,8 +33,7 @@ const JAMBPracticeQuestionsSelection = () => {
   const [startingExam, setStartingExam] = useState(false);
   const { hasActiveSubscription, maxQuestionsPerSubject } = useSubscriptionGate();
 
-  // Error state
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Memoized values for performance
   const questionCountOptions = useMemo(() =>
@@ -50,7 +50,7 @@ const JAMBPracticeQuestionsSelection = () => {
   const loadSubjects = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
+      setLoadError(null);
 
       const response = await getSubjects(examType, 'practice');
 
@@ -58,18 +58,12 @@ const JAMBPracticeQuestionsSelection = () => {
         throw new Error('Failed to load subjects');
       }
 
-      if (!response.data || response.data.length === 0) {
-        setError('No practice subjects are available at the moment.');
-        setSubjects([]);
-        return;
-      }
-
-      setSubjects(response.data);
+      setSubjects(response.data ?? []);
     } catch (error) {
       console.error('Error loading subjects:', error);
       const errorMessage = getApiErrorMessage(error as AxiosError);
-      setError(`Failed to load subjects: ${errorMessage}`);
-      toast.error('Failed to load subjects. Please refresh the page.');
+      setLoadError(errorMessage);
+      toast.error('Failed to load subjects. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -231,23 +225,36 @@ const JAMBPracticeQuestionsSelection = () => {
       <AppLayout>
         <div className="flex flex-col items-center justify-center h-full">
           <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-          <p className="text-muted-foreground">Loading JAMB practice subjects...</p>
+          <p className="text-muted-foreground">Loading {examTypeLabel} practice subjects...</p>
         </div>
       </AppLayout>
     );
   }
 
-  // Error state
-  if (error) {
+  if (loadError) {
     return (
       <AppLayout>
-        <div className="flex flex-col items-center justify-center h-full max-w-md mx-auto text-center">
-          <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Unable to Load Subjects</h2>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={loadSubjects} variant="outline">
-            Try Again
-          </Button>
+        <div className="max-w-md mx-auto">
+          <EmptyStateCard
+            kind="load-error"
+            errorMessage={loadError}
+            onRetry={loadSubjects}
+          />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (subjects.length === 0) {
+    return (
+      <AppLayout>
+        <div className="max-w-md mx-auto">
+          <EmptyStateCard
+            kind="no-subjects"
+            context={{ examTypeName: examTypeLabel, mode: 'practice' }}
+            onRetry={loadSubjects}
+            secondaryAction={{ label: 'Back to dashboard', href: '/' }}
+          />
         </div>
       </AppLayout>
     );

@@ -6,7 +6,6 @@ export interface ExamCategory {
   name: string;
   slug: string;
   description: string;
-  icon_name: string;
   flow_type: ExamFlowType;
   is_active: boolean;
 }

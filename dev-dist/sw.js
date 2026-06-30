@@ -69,6 +69,7 @@ if (!self.define) {
 }
 define(['./workbox-29258bda'], (function (workbox) { 'use strict';
 
+  importScripts("/push-sw.js");
   self.addEventListener('message', event => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
       self.skipWaiting();
@@ -82,16 +83,14 @@ define(['./workbox-29258bda'], (function (workbox) { 'use strict';
    */
   workbox.precacheAndRoute([{
     "url": "/index.html",
-    "revision": "0.nvvrs47o9l"
+    "revision": "0.t81pb36974o"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
     allowlist: [/^\/$/],
     denylist: [/^\/api/]
   }));
-  workbox.registerRoute(({
-    url
-  }) => url.origin === apiOrigin, new workbox.NetworkFirst({
+  workbox.registerRoute(/^http:\/\/api\.test\//, new workbox.NetworkFirst({
     "cacheName": "stepra-api",
     "networkTimeoutSeconds": 10,
     plugins: [new workbox.ExpirationPlugin({
