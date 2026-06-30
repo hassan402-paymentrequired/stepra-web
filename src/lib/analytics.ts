@@ -1,8 +1,5 @@
 export type AnalyticsEvent =
   | 'theme_change'
-  | 'pwa_install_prompt'
-  | 'pwa_install_accepted'
-  | 'pwa_install_dismissed'
   | 'referral_share';
 
 type AnalyticsPayload = Record<string, string | number | boolean | undefined>;

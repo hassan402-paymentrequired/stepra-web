@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { toast } from 'sonner';
-import { InstallBanner } from './install-banner';
 
 export function PwaManager() {
   const toastShown = useRef(false);
@@ -33,5 +32,5 @@ export function PwaManager() {
     });
   }, [needRefresh, updateServiceWorker]);
 
-  return <InstallBanner />;
+  return null;
 }

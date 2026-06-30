@@ -1,4 +1,4 @@
-const WHATSAPP_GROUP_URL = "https://chat.whatsapp.com/Diat978rzwLJuyBBGkoG44?mode=gi_t";
+const WHATSAPP_GROUP_URL = "https://whatsapp.com/channel/0029Vb8EhdLCHDyp600S5509";
 
 export function WhatsAppFloat() {
   return (
