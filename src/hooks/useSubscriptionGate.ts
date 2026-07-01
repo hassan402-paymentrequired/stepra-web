@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@/lib/auth';
-import { getSubscriptionStatus } from '@/apis/subscription';
+import { getSubscriptionStatus, registerSubscriptionDevice } from '@/apis/subscription';
 
 interface UseSubscriptionGateOptions {
   /** Max questions per subject when subscribed (default: 100 for JAMB-style) */
@@ -27,14 +27,23 @@ export function useSubscriptionGate({
       try {
         const response = await getSubscriptionStatus();
         if (response.success && response.data) {
+          if (response.data.needs_device_binding) {
+            try {
+              await registerSubscriptionDevice();
+              const refreshed = await getSubscriptionStatus();
+              if (refreshed.success && refreshed.data) {
+                setHasActiveSubscription(refreshed.data.has_active_subscription || false);
+                return;
+              }
+            } catch {
+              // Another device may have claimed the subscription first.
+            }
+          }
+
           setHasActiveSubscription(response.data.has_active_subscription || false);
         }
       } catch {
-        const userHasActive =
-          user.subscription_status === 'active' ||
-          (user.subscription_expires_at &&
-            new Date(user.subscription_expires_at) > new Date());
-        setHasActiveSubscription(userHasActive || false);
+        setHasActiveSubscription(false);
       } finally {
         setLoading(false);
       }

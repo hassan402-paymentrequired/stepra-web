@@ -70,6 +70,19 @@ const Subscription = () => {
     fetchData();
   }, [fetchData]);
 
+  // Legacy subscriptions may be active but unbound — link this device once on load.
+  useEffect(() => {
+    if (!status?.needs_device_binding || loading) {
+      return;
+    }
+
+    registerSubscriptionDevice()
+      .then(() => fetchData())
+      .catch(() => {
+        // Binding may fail if another device already claimed the subscription.
+      });
+  }, [status?.needs_device_binding, loading, fetchData]);
+
   const handlePaymentReference = useCallback(async (reference: string) => {
     try {
       setProcessing(true);
@@ -252,6 +265,7 @@ const Subscription = () => {
 
   const hasActiveSubscription = status?.has_active_subscription || false;
   const subscriptionOnOtherDevice = !hasActiveSubscription && status?.other_devices_active;
+  const needsDeviceBinding = !hasActiveSubscription && status?.needs_device_binding;
 
   return (
     <AppLayout>
@@ -266,6 +280,17 @@ const Subscription = () => {
               <p className="text-amber-700 text-sm">
                 You have an active subscription on another device. Stepra subscriptions are bound per device.
                 To use Stepra on this device as well, you can purchase a new plan below.
+              </p>
+            </div>
+          )}
+
+          {needsDeviceBinding && (
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 mb-6">
+              <h3 className="text-lg font-semibold text-blue-800 mb-2">
+                Link This Device
+              </h3>
+              <p className="text-blue-700 text-sm">
+                Your subscription is active but not yet linked to this device. We are linking it now so you can continue practicing here.
               </p>
             </div>
           )}

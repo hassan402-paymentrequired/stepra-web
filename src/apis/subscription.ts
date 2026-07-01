@@ -13,6 +13,7 @@ export interface SubscriptionPlan {
 export interface SubscriptionStatus {
   has_active_subscription: boolean;
   other_devices_active: boolean;
+  needs_device_binding?: boolean;
   subscription_status: string;
   subscription_expires_at: string | null;
   subscription_device_bound?: boolean;
@@ -107,7 +108,7 @@ export const verifyPayment = async (
   return response.data;
 };
 
-/** Bind current device (IP) to subscription. Call after successful payment. Backend uses request IP. */
+/** Bind current device to subscription. Used for admin/manual subscriptions without a device yet. */
 export const registerSubscriptionDevice = async (): Promise<{
   success: boolean;
   message?: string;
