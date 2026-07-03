@@ -15,6 +15,8 @@ interface UseScreenshotPreventionOptions {
   onScreenshotAttempt?: () => void;
   onSuspiciousActivity?: (type: string) => void;
   watermarkText?: string;
+  /** Visual overlay watermark — off by default; disfigures exam UI when enabled */
+  showWatermark?: boolean;
   strictMode?: boolean;
   attemptUuid?: string;
   logToBackend?: boolean;
@@ -32,6 +34,7 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
     onScreenshotAttempt,
     onSuspiciousActivity,
     watermarkText = 'CONFIDENTIAL',
+    showWatermark = false,
     strictMode = false,
     attemptUuid,
     logToBackend = true
@@ -423,7 +426,9 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
 
     // Initialize protection
     const style = addProtectiveStyles();
-    createWatermark();
+    if (showWatermark) {
+      createWatermark();
+    }
     document.body.classList.add('screenshot-protected');
 
     // Add event listeners

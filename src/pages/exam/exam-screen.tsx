@@ -74,8 +74,8 @@ const ExamScreen = () => {
     enabled: true,
     strictMode: true,
     logToBackend: true,
+    showWatermark: false,
     attemptUuid: examSession?.attemptUuid,
-    watermarkText: user ? `${user.name} - ${user.email} - Practice Session` : 'CONFIDENTIAL - PRACTICE SESSION',
     onScreenshotAttempt: () => {
       console.warn('Screenshot attempt detected for user:', user?.email, 'in attempt:', examSession?.attemptUuid);
     },
@@ -964,10 +964,10 @@ const ExamScreen = () => {
       />
 
       {/* Question Content */}
-      <div className="flex-1 overflow-y-auto p-6 relative" style={{ zIndex: 1 }}>
+      <div className="flex-1 overflow-y-auto px-3 py-4 sm:p-6 relative" style={{ zIndex: 1 }}>
         <div className="max-w-4xl mx-auto relative" style={{ zIndex: 1 }}>
           {/* Question Number */}
-          <p className="text-sm text-muted-foreground mb-4">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-4">
             Question {currentQuestionIndex + 1}
           </p>
 
@@ -978,7 +978,7 @@ const ExamScreen = () => {
           />
 
           {/* Answer Options */}
-          <div className="mt-8 relative" style={{ zIndex: 10001 }}>
+          <div className="mt-4 sm:mt-8 relative" style={{ zIndex: 10001 }}>
             <AnswerOptions
               question={currentQuestion}
               selectedAnswerId={selectedAnswerId}
@@ -997,59 +997,70 @@ const ExamScreen = () => {
       </div>
 
       {/* Navigation Footer */}
-      <div className="border-t bg-card p-4 relative z-10">
+      <div className="border-t bg-card px-2 py-2 sm:px-4 sm:py-4 relative z-10">
         <div className="max-w-4xl mx-auto">
           {/* Collapse/Expand Toggle */}
-          <div className="flex justify-center -mt-4 mb-2">
+          <div className="flex justify-center -mt-3 sm:-mt-4 mb-1 sm:mb-2">
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-4 rounded-t-none rounded-b-lg bg-card border border-t-0 border-border/50 text-muted-foreground hover:text-primary transition-all shadow-sm flex items-center gap-1"
+              className="h-5 sm:h-6 px-3 sm:px-4 rounded-t-none rounded-b-lg bg-card border border-t-0 border-border/50 text-muted-foreground hover:text-primary transition-all shadow-sm flex items-center gap-1"
               onClick={() => setIsFooterExpanded(!isFooterExpanded)}
             >
               {isFooterExpanded ? (
                 <>
                   <ChevronDown className="h-3 w-3" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Hide Questions</span>
+                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">
+                    Hide Questions
+                  </span>
                 </>
               ) : (
                 <>
                   <ChevronUp className="h-3 w-3" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Show Questions</span>
+                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">
+                    Show Questions ({currentQuestions.length})
+                  </span>
                 </>
               )}
             </Button>
           </div>
 
-          {/* Question Grid (Collapsible) */}
+          {/* Question Grid (Collapsible, scrollable for long papers) */}
           <div
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${isFooterExpanded ? "max-h-60 mb-4 opacity-100" : "max-h-0 opacity-0"
-              }`}
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              isFooterExpanded
+                ? "max-h-[min(42vh,320px)] mb-2 sm:mb-4 opacity-100"
+                : "max-h-0 opacity-0"
+            }`}
           >
-            <div className="flex flex-wrap gap-2 py-1">
-              {currentQuestions.map((q, index) => {
-                const isAnswered =
-                  (q.question_type === "multiple_choice" ||
+            <div className="max-h-[min(40vh,300px)] overflow-y-auto overscroll-y-contain -mx-0.5 px-0.5">
+              <div className="grid grid-cols-7 sm:grid-cols-10 gap-1 sm:gap-1.5 pb-1">
+                {currentQuestions.map((q, index) => {
+                  const isAnswered =
+                    (q.question_type === "multiple_choice" ||
                     q.question_type === "true_false"
-                    ? selectedAnswers[q.uuid] !== undefined
-                    : textInputAnswers[q.uuid] !== undefined &&
-                    textInputAnswers[q.uuid] !== "") || false;
-                const isCurrent = index === currentQuestionIndex;
-                return (
-                  <button
-                    key={q.uuid}
-                    onClick={() => goToQuestion(index)}
-                    className={`w-10 h-10 rounded border-2 flex items-center justify-center text-sm font-medium transition-colors ${isCurrent
-                        ? "bg-primary border-primary !text-primary-foreground"
-                        : isAnswered
-                          ? "bg-primary/20 border-primary !text-primary"
-                          : "border-muted-foreground !text-muted-foreground"
+                      ? selectedAnswers[q.uuid] !== undefined
+                      : textInputAnswers[q.uuid] !== undefined &&
+                        textInputAnswers[q.uuid] !== "") || false;
+                  const isCurrent = index === currentQuestionIndex;
+                  return (
+                    <button
+                      key={q.uuid}
+                      type="button"
+                      onClick={() => goToQuestion(index)}
+                      className={`aspect-square min-h-8 sm:min-h-9 rounded border flex items-center justify-center text-[11px] sm:text-xs font-medium transition-colors ${
+                        isCurrent
+                          ? "bg-primary border-primary text-primary-foreground"
+                          : isAnswered
+                            ? "bg-primary/20 border-primary text-primary"
+                            : "border-muted-foreground/40 text-muted-foreground"
                       }`}
-                  >
-                    {index + 1}
-                  </button>
-                );
-              })}
+                    >
+                      {index + 1}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -1073,7 +1084,7 @@ const ExamScreen = () => {
             <Button
               onClick={() => handleCompleteExam(false)}
               disabled={loading}
-              className="w-full mt-3"
+              className="w-full mt-2 sm:mt-3 h-9 sm:h-10 text-xs sm:text-sm"
             >
               {loading ? "Submitting..." : "Submit Exam"}
             </Button>

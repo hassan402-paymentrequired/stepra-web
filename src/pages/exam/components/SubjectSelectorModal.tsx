@@ -20,31 +20,34 @@ export const SubjectSelectorModal = ({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end z-50">
       <div className="w-full bg-background rounded-t-lg max-h-[70vh] flex flex-col">
-        <div className="flex justify-between items-center p-4 border-b">
-          <h3 className="font-semibold">Select Subject</h3>
-          <button onClick={onClose}>
-            <X className="h-5 w-5" />
+        <div className="flex justify-between items-center px-3 py-3 sm:px-4 sm:py-4 border-b gap-3">
+          <h3 className="font-semibold text-sm sm:text-base">Select Subject</h3>
+          <button type="button" onClick={onClose} className="shrink-0 p-1">
+            <X className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
         </div>
-        <div className="overflow-y-auto p-4 space-y-3 flex flex-col gap-y-3">
+        <div className="overflow-y-auto p-3 sm:p-4 flex flex-col gap-2 sm:gap-3">
           {subjects.map((subject) => {
             const isCurrent = subject === currentSubject;
             return (
               <button
                 key={subject}
+                type="button"
                 onClick={() => {
                   onSelectSubject(subject);
                   onClose();
                 }}
-                className={`w-full p-4 border rounded-lg mb-3 text-left ${
+                className={`w-full p-3 sm:p-4 border rounded-lg text-left ${
                   isCurrent ? "border-primary bg-primary/10" : ""
                 }`}
               >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-semibold">{subject}</p>
-                  </div>
-                  {isCurrent && <Check className="h-5 w-5 text-primary" />}
+                <div className="flex justify-between items-start gap-3">
+                  <p className="font-semibold text-xs sm:text-sm break-words min-w-0 flex-1">
+                    {subject}
+                  </p>
+                  {isCurrent && (
+                    <Check className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0 mt-0.5" />
+                  )}
                 </div>
               </button>
             );

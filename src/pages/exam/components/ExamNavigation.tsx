@@ -32,7 +32,6 @@ export const ExamNavigation = ({
 }: ExamNavigationProps) => {
   const handleNextOrSwitch = () => {
     if (isLastQuestionInSubject && !allSubjectsCompleted) {
-      // Find next incomplete subject
       const subjects = Object.keys(subjectsQuestions);
       const currentIndex = subjects.indexOf(currentSubject);
       const nextSubjects = subjects.slice(currentIndex + 1);
@@ -44,12 +43,11 @@ export const ExamNavigation = ({
             q.question_type === "true_false"
           ) {
             return selectedAnswers[q.uuid] === undefined;
-          } else {
-            return (
-              !textInputAnswers[q.uuid] ||
-              textInputAnswers[q.uuid] === ""
-            );
           }
+          return (
+            !textInputAnswers[q.uuid] ||
+            textInputAnswers[q.uuid] === ""
+          );
         });
       });
 
@@ -63,37 +61,33 @@ export const ExamNavigation = ({
     }
   };
 
+  const navButtonClass =
+    "flex-1 h-9 sm:h-10 text-xs sm:text-sm px-2 sm:px-4";
+
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-2 sm:gap-3">
       <Button
         variant="outline"
         onClick={onPrevious}
         disabled={currentQuestionIndex === 0}
-        className="flex-1"
+        className={navButtonClass}
       >
-        <ChevronLeft className="h-4 w-4 mr-2" />
+        <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2 shrink-0" />
         Previous
       </Button>
 
       {isLastQuestionInSubject && allSubjectsCompleted ? (
-        <Button
-          onClick={onSubmit}
-          disabled={loading}
-          className="flex-1"
-        >
+        <Button onClick={onSubmit} disabled={loading} className={navButtonClass}>
           {loading ? "Submitting..." : "Submit Exam"}
         </Button>
       ) : isLastQuestionInSubject ? (
-        <Button
-          onClick={handleNextOrSwitch}
-          className="flex-1"
-        >
+        <Button onClick={handleNextOrSwitch} className={navButtonClass}>
           Next Subject
         </Button>
       ) : (
-        <Button onClick={onNext} className="flex-1">
+        <Button onClick={onNext} className={navButtonClass}>
           Next
-          <ChevronRight className="h-4 w-4 ml-2" />
+          <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 ml-1 sm:ml-2 shrink-0" />
         </Button>
       )}
     </div>
