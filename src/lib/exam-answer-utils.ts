@@ -1,36 +1,55 @@
+import type { PublicUuid } from '@/types/exam';
+
+function virtualTrueFalseText(answerUuid: string): 'True' | 'False' | null {
+  if (answerUuid.startsWith('virtual-true-')) return 'True';
+  if (answerUuid.startsWith('virtual-false-')) return 'False';
+  return null;
+}
+
 export function buildAnswersPayload(
-  selectedAnswers: Record<number, number | string>,
-  textInputAnswers: Record<number, string>,
-  questionStartTime: Record<number, number>
+  selectedAnswers: Record<string, string>,
+  textInputAnswers: Record<string, string>,
+  questionStartTime: Record<string, number>
 ) {
   const answers: Array<{
-    question_id: number;
-    answer_id?: number;
+    question_uuid: PublicUuid;
+    answer_uuid?: PublicUuid;
     answer_text?: string;
     time_spent?: number;
   }> = [];
 
-  for (const [questionId, textValue] of Object.entries(textInputAnswers)) {
+  for (const [questionUuid, textValue] of Object.entries(textInputAnswers)) {
     if (!textValue?.trim()) continue;
-    const qId = parseInt(questionId, 10);
     answers.push({
-      question_id: qId,
+      question_uuid: questionUuid,
       answer_text: textValue.trim(),
-      time_spent: questionStartTime[qId]
-        ? Math.floor((Date.now() - questionStartTime[qId]) / 1000)
+      time_spent: questionStartTime[questionUuid]
+        ? Math.floor((Date.now() - questionStartTime[questionUuid]) / 1000)
         : 0,
     });
   }
 
-  for (const [questionId, answerId] of Object.entries(selectedAnswers)) {
-    if (typeof answerId !== 'number') continue;
-    const qId = parseInt(questionId, 10);
+  for (const [questionUuid, answerUuid] of Object.entries(selectedAnswers)) {
+    if (!answerUuid) continue;
+
+    const timeSpent = questionStartTime[questionUuid]
+      ? Math.floor((Date.now() - questionStartTime[questionUuid]) / 1000)
+      : 0;
+
+    const virtualText = virtualTrueFalseText(answerUuid);
+    if (virtualText) {
+      answers.push({
+        question_uuid: questionUuid,
+        answer_text: virtualText,
+        time_spent: timeSpent,
+      });
+      continue;
+    }
+
     answers.push({
-      question_id: qId,
-      answer_id: answerId,
-      time_spent: questionStartTime[qId]
-        ? Math.floor((Date.now() - questionStartTime[qId]) / 1000)
-        : 0,
+      question_uuid: questionUuid,
+      answer_uuid: answerUuid,
+      time_spent: timeSpent,
     });
   }
 

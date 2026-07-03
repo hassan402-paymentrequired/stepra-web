@@ -12,18 +12,18 @@ import { toast } from "sonner";
 
 interface QuestionResult {
   question: {
-    id: number;
+    uuid: string;
     question_text: string;
     explanation: string | null;
     points: number;
   };
   user_answer: {
-    id: number;
+    uuid: string;
     answer_text: string;
     order: string;
   } | null;
   correct_answer: {
-    id: number;
+    uuid: string;
     answer_text: string;
     order: string;
   } | null;
@@ -32,7 +32,7 @@ interface QuestionResult {
 }
 
 interface AttemptData {
-  id: number;
+  uuid: string;
   score: number;
   correct_answers: number;
   total_questions: number;
@@ -54,8 +54,8 @@ interface SubjectAnalytics {
 const ExamResults = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const routeState = location.state as { attemptId?: number } | undefined;
-  const attemptId = routeState?.attemptId;
+  const routeState = location.state as { attemptUuid?: string } | undefined;
+  const attemptUuid = routeState?.attemptUuid;
 
   const [loading, setLoading] = useState(true);
   const [attempt, setAttempt] = useState<AttemptData | null>(null);
@@ -67,10 +67,12 @@ const ExamResults = () => {
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
 
   useEffect(() => {
-    if (attemptId) {
-      loadResults();
+    if (!attemptUuid) {
+      navigate("/dashboard", { replace: true });
+      return;
     }
-  }, [attemptId]);
+    loadResults();
+  }, [attemptUuid, navigate]);
 
   useEffect(() => {
     getSubscriptionStatus()
@@ -86,11 +88,11 @@ const ExamResults = () => {
   }, [attempt, results.length, hasActiveSubscription]);
 
   const loadResults = async () => {
-    if (!attemptId) return;
+    if (!attemptUuid) return;
 
     try {
       setLoading(true);
-      const response = await getExamResults(attemptId);
+      const response = await getExamResults(attemptUuid);
 
       if (response.success && response.data) {
         setAttempt(response.data.attempt);
@@ -300,7 +302,7 @@ const ExamResults = () => {
                 <Button
                   onClick={() =>
                     navigate("/exam/corrections", {
-                      state: { attemptId, subjects },
+                      state: { attemptUuid, subjects },
                     })
                   }
                   variant="outline"

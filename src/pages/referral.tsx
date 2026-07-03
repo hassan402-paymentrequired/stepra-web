@@ -343,7 +343,7 @@ const Referral = () => {
               <div className="space-y-4">
                 {referralData.recent_referrals.map((referral) => (
                   <div
-                    key={referral.id}
+                    key={referral.uuid}
                     className="flex items-center justify-between p-4 border rounded-lg"
                   >
                     <div className="flex items-center gap-4">

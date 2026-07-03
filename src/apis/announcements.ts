@@ -1,7 +1,7 @@
 import api from '@/lib/api';
 
 export interface Announcement {
-  id: number;
+  uuid: string;
   title: string;
   message: string;
   type: 'info' | 'warning' | 'success' | 'error';

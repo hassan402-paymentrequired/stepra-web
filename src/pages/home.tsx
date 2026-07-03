@@ -40,7 +40,7 @@ const Home = () => {
   const navigate = useNavigate();
   const { data: user, isLoading: authLoading } = useUser();
   const { setExamType } = useExamSelection();
-  const [dismissedAnnouncementId, setDismissedAnnouncementId] = useState<number | null>(null);
+  const [dismissedAnnouncementUuid, setDismissedAnnouncementUuid] = useState<string | null>(null);
 
   const {
     data: dashboard,
@@ -68,10 +68,12 @@ const Home = () => {
   }, [user, authLoading, navigate]);
 
   const handleCategoryPress = (category: ExamCategory) => {
-    setExamType(category.id, category.slug, category.name, category.flow_type);
+    setExamType(category.uuid, category.slug, category.name, category.flow_type);
 
     if (category.flow_type === "departmental") {
       navigate("/unilag/departments");
+    } else if (category.slug.toLowerCase() === "dli") {
+      navigate(examPath(category.slug, "practice-questions"));
     } else {
       navigate(examPath(category.slug, "mode-selection"));
     }
@@ -102,7 +104,7 @@ const Home = () => {
   }
 
   const activeAnnouncement = dashboard?.announcements.find(
-    (a) => a.id !== dismissedAnnouncementId
+    (a) => a.uuid !== dismissedAnnouncementUuid
   );
 
   const today = new Date().toISOString().slice(0, 10);
@@ -134,7 +136,7 @@ const Home = () => {
         {activeAnnouncement && (
           <AnnouncementBanner
             announcement={activeAnnouncement}
-            onDismiss={() => setDismissedAnnouncementId(activeAnnouncement.id)}
+            onDismiss={() => setDismissedAnnouncementUuid(activeAnnouncement.uuid)}
             onPress={() => {
               if (activeAnnouncement.link) {
                 window.open(activeAnnouncement.link, "_blank", "noopener,noreferrer");

@@ -1,7 +1,7 @@
 import { Trophy, TrendingDown, TrendingUp, Target } from "lucide-react";
 
 interface RecentAttempt {
-  id: number;
+  uuid: string;
   exam_title: string;
   score: number;
   percentage: number;
@@ -64,7 +64,7 @@ function getPerformanceCopy(
     };
   }
 
-  if (previous && previous.id !== latest.id) {
+  if (previous && previous.uuid !== latest.uuid) {
     const diff = pct - previous.percentage;
 
     if (diff > 0) {

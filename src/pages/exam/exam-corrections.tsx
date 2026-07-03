@@ -18,7 +18,7 @@ import type { Question } from "@/apis/exam";
 
 interface QuestionResult {
   question: {
-    id: number;
+    uuid: string;
     question_text: string;
     question_type?: 'multiple_choice' | 'true_false' | 'text_input' | 'numeric_input';
     explanation: string | null;
@@ -29,15 +29,15 @@ interface QuestionResult {
     image_path?: string;
     subject?: string;
     /** All answer options (from API) for multiple_choice / true_false */
-    answers?: { id: number; answer_text: string; order: string; is_correct: boolean }[];
+    answers?: { uuid: string; answer_text: string; order: string; is_correct: boolean }[];
   };
   user_answer: {
-    id: number | null;
+    uuid: string | null;
     answer_text: string;
     order: string | null;
   } | null;
   correct_answer: {
-    id: number | null;
+    uuid: string | null;
     answer_text: string;
     order: string | null;
   } | null;
@@ -52,12 +52,12 @@ interface QuestionWithAnswers extends Question {
 const ExamCorrections = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const attemptId = (location.state as { attemptId: number })?.attemptId;
+  const attemptUuid = (location.state as { attemptUuid: string })?.attemptUuid;
   const subjects = (location.state as { subjects?: string[] })?.subjects || [];
 
   const [loading, setLoading] = useState(true);
   const [questionsWithAnswers, setQuestionsWithAnswers] = useState<
-    Record<number, QuestionWithAnswers>
+    Record<string, QuestionWithAnswers>
   >({});
   const [resultsBySubject, setResultsBySubject] = useState<
     Record<string, QuestionResult[]>
@@ -69,17 +69,19 @@ const ExamCorrections = () => {
   const [isFooterExpanded, setIsFooterExpanded] = useState(false);
 
   useEffect(() => {
-    if (attemptId) {
-      loadResults();
+    if (!attemptUuid) {
+      navigate("/dashboard", { replace: true });
+      return;
     }
-  }, [attemptId]);
+    loadResults();
+  }, [attemptUuid, navigate]);
 
   const loadResults = async () => {
-    if (!attemptId) return;
+    if (!attemptUuid) return;
 
     try {
       setLoading(true);
-      const response = await getExamResults(attemptId);
+      const response = await getExamResults(attemptUuid);
 
       if (response.success && response.data) {
         const allResults = response.data.results || [];
@@ -88,7 +90,7 @@ const ExamCorrections = () => {
         // Fetch full question details with all answers
         // Note: The API should ideally include all answers in the response
         // For now, we'll need to fetch them separately or the API needs to be updated
-        const questionsMap: Record<number, QuestionWithAnswers> = {};
+        const questionsMap: Record<string, QuestionWithAnswers> = {};
 
         // Group results by subject
         const grouped: Record<string, QuestionResult[]> = {};
@@ -162,11 +164,11 @@ const ExamCorrections = () => {
 
         // Process results and build questions map
         allResults.forEach((result: QuestionResult) => {
-          const questionId = result.question.id;
+          const questionUuid = result.question.uuid;
           const questionType = result.question.question_type || 'multiple_choice';
 
-          if (!questionsMap[questionId]) {
-            let answers: { id: number; answer_text: string; order: string }[] = [];
+          if (!questionsMap[questionUuid]) {
+            let answers: { uuid: string; answer_text: string; order: string }[] = [];
 
             // For multiple_choice and true_false, use all options from API when available
             if (questionType === 'multiple_choice' || questionType === 'true_false') {
@@ -174,25 +176,25 @@ const ExamCorrections = () => {
               if (apiAnswers && apiAnswers.length > 0) {
                 answers = apiAnswers
                   .map((a) => ({
-                    id: a.id,
+                    uuid: a.uuid,
                     answer_text: a.answer_text,
                     order: a.order,
                   }))
                   .sort((a, b) => (a.order || '').localeCompare(b.order || ''));
               } else {
                 // Fallback: only correct + user answer (e.g. old API)
-                const answerMap = new Map<string, { id: number; answer_text: string; order: string }>();
+                const answerMap = new Map<string, { uuid: string; answer_text: string; order: string }>();
                 if (result.correct_answer && result.correct_answer.order) {
                   answerMap.set(result.correct_answer.order, {
-                    id: result.correct_answer.id || 0,
+                    uuid: result.correct_answer.uuid || '',
                     answer_text: result.correct_answer.answer_text,
                     order: result.correct_answer.order,
                   });
                 }
                 if (result.user_answer && result.user_answer.order &&
-                  result.user_answer.id !== result.correct_answer?.id) {
+                  result.user_answer.uuid !== result.correct_answer?.uuid) {
                   answerMap.set(result.user_answer.order, {
-                    id: result.user_answer.id || 0,
+                    uuid: result.user_answer.uuid || '',
                     answer_text: result.user_answer.answer_text,
                     order: result.user_answer.order,
                   });
@@ -203,8 +205,8 @@ const ExamCorrections = () => {
               }
             }
 
-            questionsMap[questionId] = {
-              id: questionId,
+            questionsMap[questionUuid] = {
+              uuid: questionUuid,
               question_text: result.question.question_text,
               question_type: questionType,
               points: result.question.points || 0,
@@ -314,9 +316,9 @@ const ExamCorrections = () => {
   }
 
   const totalQuestionsForSubject = currentQuestions.length;
-  const currentQuestion = questionsWithAnswers[currentResult.question.id];
-  const correctAnswerId = currentResult.correct_answer?.id;
-  const userAnswerId = currentResult.user_answer?.id;
+  const currentQuestion = questionsWithAnswers[currentResult.question.uuid];
+  const correctAnswerUuid = currentResult.correct_answer?.uuid;
+  const userAnswerUuid = currentResult.user_answer?.uuid;
 
   // Get base URL for images
   const baseUrl = import.meta.env.VITE_BASE_URL || "http://localhost:8000";
@@ -456,12 +458,12 @@ const ExamCorrections = () => {
                 // Multiple Choice / True/False: show all options with Your answer & Correct labels
                 <div className="space-y-3">
                   {currentQuestion.answers.map((answer) => {
-                    const isCorrect = correctAnswerId === answer.id;
-                    const isUserAnswer = userAnswerId === answer.id;
+                    const isCorrect = correctAnswerUuid === answer.uuid;
+                    const isUserAnswer = userAnswerUuid === answer.uuid;
 
                     return (
                       <div
-                        key={answer.id}
+                        key={answer.uuid}
                         className={`w-full p-4 rounded-lg border-2 flex items-center gap-3 transition-all ${isCorrect && isUserAnswer
                           ? "border-green-500 bg-green-50 dark:bg-green-950/30"
                           : isCorrect
@@ -566,7 +568,7 @@ const ExamCorrections = () => {
 
                 return (
                   <button
-                    key={result.question.id}
+                    key={result.question.uuid}
                     onClick={() => goToQuestion(index)}
                     className={`w-10 h-10 rounded border-2 flex items-center justify-center text-sm font-medium ${isCurrent
                       ? "bg-primary border-primary text-white"

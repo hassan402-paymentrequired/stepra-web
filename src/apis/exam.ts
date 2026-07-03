@@ -1,40 +1,20 @@
 import api from '@/lib/api';
+import type {
+  Department,
+  Exam,
+  ExamAttemptSummary,
+  InProgressAttempt,
+  PublicUuid,
+  Question,
+} from '@/types/exam';
 
-export interface Exam {
-  id: number;
-  title: string;
-  description?: string;
-  exam_type: string;
-  subject?: string;
-  year?: number;
-  is_active: boolean;
-  questions_count?: number;
-}
-
-export interface Question {
-  id: number;
-  question_text: string;
-  question_type: 'multiple_choice' | 'true_false' | 'text_input' | 'numeric_input';
-  points: number;
-  order: number;
-  answers?: Answer[];
-  expected_answer?: string;
-  image?: string | null;
-  image_url?: string;
-  image_path?: string;
-}
-
-export interface Answer {
-  id: number;
-  answer_text: string;
-  order: string;
-}
+export type { Department, Exam, Question, ExamAttemptSummary, InProgressAttempt, PublicUuid };
 
 export interface ExamQuestionsResponse {
   success: boolean;
   data: {
     exam: {
-      id: number;
+      uuid: PublicUuid;
       title: string;
       total_questions: number;
     };
@@ -52,7 +32,7 @@ export interface PracticeQuestionsResponse {
 }
 
 export const getExams = async (params?: {
-  exam_type?: string;
+  exam_type?: PublicUuid;
   subject?: string;
   year?: number;
 }): Promise<{ success: boolean; data: Exam[] }> => {
@@ -61,65 +41,57 @@ export const getExams = async (params?: {
 };
 
 export const getSubjects = async (
-  examType: string,
+  examCategoryUuid: PublicUuid,
   type: 'past_question' | 'practice' = 'past_question'
 ): Promise<{ success: boolean; data: string[] }> => {
   const response = await api.get('/exams/subjects', {
-    params: { exam_type: examType, type },
+    params: { exam_type: examCategoryUuid, type },
   });
   return response.data;
 };
 
 export const getAvailableYears = async (
-  examType: string,
+  examCategoryUuid: PublicUuid,
   subjects: string[]
 ): Promise<{ success: boolean; data: number[] }> => {
   const response = await api.get('/exams/years', {
-    params: { exam_type: examType, subjects },
+    params: { exam_type: examCategoryUuid, subjects },
   });
   return response.data;
 };
 
 export const getExamQuestions = async (
-  examId: number
+  examUuid: PublicUuid
 ): Promise<ExamQuestionsResponse> => {
-  const response = await api.get(`/exams/${examId}/questions`);
+  const response = await api.get(`/exams/${examUuid}/questions`);
   return response.data;
 };
 
 export const getPracticeQuestions = async (
-  examType: string,
+  examCategoryUuid: PublicUuid,
   subject: string,
   count: number,
-  subjectTestId?: number
+  subjectTestUuid?: PublicUuid
 ): Promise<PracticeQuestionsResponse> => {
   const params: Record<string, string | number> = {
-    exam_type: examType,
+    exam_type: examCategoryUuid,
     subject,
     count,
   };
-  if (subjectTestId) params.subject_test_id = subjectTestId;
+  if (subjectTestUuid) params.subject_test_uuid = subjectTestUuid;
   const response = await api.get('/questions/practice', { params });
   return response.data;
 };
 
-export interface Department {
-  id: number;
-  name: string;
-  slug: string;
-  description?: string;
-}
-
 export interface SubjectTest {
-  id: number;
-  subject_id: number;
+  uuid: PublicUuid;
   name: string;
 }
 
 export interface DepartmentSubjectsResponse {
   success: boolean;
   data: Array<{
-    id: number;
+    uuid: PublicUuid;
     name: string;
     slug: string;
     tests?: SubjectTest[];
@@ -132,34 +104,34 @@ export const getDepartments = async (): Promise<{ success: boolean; data: Depart
 };
 
 export const getDepartmentSubjects = async (
-  departmentId: number,
-  examType: 'DLI' | 'UNILAG'
+  departmentUuid: PublicUuid,
+  examCategoryUuid: PublicUuid
 ): Promise<DepartmentSubjectsResponse> => {
-  const response = await api.get(`/departments/${departmentId}/subjects`, {
-    params: { exam_type: examType },
+  const response = await api.get(`/departments/${departmentUuid}/subjects`, {
+    params: { exam_type: examCategoryUuid },
   });
   return response.data;
 };
 
 export const startExamAttempt = async (
-  examId: number,
+  examUuid: PublicUuid,
   data: {
-    subjects?: Array<{ subject: string; question_count: number; question_ids?: number[]; questions?: Question[] }>;
+    subjects?: Array<{ subject: string; question_count: number; question_uuids?: PublicUuid[]; questions?: Question[] }>;
     duration_minutes?: number;
   }
 ) => {
-  const response = await api.post(`/exams/${examId}/start`, data);
+  const response = await api.post(`/exams/${examUuid}/start`, data);
   return response.data;
 };
 
 export const startPracticeSession = async (data: {
-  exam_type: string;
+  exam_type: PublicUuid;
   subjects: Array<{
     subject: string;
     question_count: number;
     year?: number;
-    question_ids?: number[];
-    subject_test_id?: number;
+    question_uuids?: PublicUuid[];
+    subject_test_uuid?: PublicUuid;
     questions?: Question[];
   }>;
   duration_minutes: number;
@@ -169,48 +141,38 @@ export const startPracticeSession = async (data: {
 };
 
 export const submitAnswer = async (
-  attemptId: number,
+  attemptUuid: PublicUuid,
   data: {
-    question_id: number;
-    answer_id?: number;
+    question_uuid: PublicUuid;
+    answer_uuid?: PublicUuid;
     answer_text?: string;
     time_spent?: number;
   }
 ) => {
-  const response = await api.post(`/exam-attempts/${attemptId}/submit-answer`, data);
+  const response = await api.post(`/exam-attempts/${attemptUuid}/submit-answer`, data);
   return response.data;
 };
 
 export const completeExamAttempt = async (
-  attemptId: number,
+  attemptUuid: PublicUuid,
   data?: {
     subjects?: Array<{ subject: string; question_count: number }>;
     duration_minutes?: number;
   }
 ) => {
-  const response = await api.post(`/exam-attempts/${attemptId}/complete`, data || {});
+  const response = await api.post(`/exam-attempts/${attemptUuid}/complete`, data || {});
   return response.data;
 };
 
-export const getExamAttempt = async (attemptId: number) => {
-  const response = await api.get(`/exam-attempts/${attemptId}`);
+export const getExamAttempt = async (attemptUuid: PublicUuid) => {
+  const response = await api.get(`/exam-attempts/${attemptUuid}`);
   return response.data;
 };
 
-export const getExamResults = async (attemptId: number) => {
-  const response = await api.get(`/exam-attempts/${attemptId}/results`);
+export const getExamResults = async (attemptUuid: PublicUuid) => {
+  const response = await api.get(`/exam-attempts/${attemptUuid}/results`);
   return response.data;
 };
-
-export interface InProgressAttempt {
-  id: number;
-  exam: {
-    id: number;
-    title: string;
-    type: string;
-  };
-  status: string;
-}
 
 export const getInProgressAttempts = async (): Promise<{
   success: boolean;
@@ -223,16 +185,16 @@ export const getInProgressAttempts = async (): Promise<{
 };
 
 export const submitAnswersBulk = async (
-  attemptId: number,
+  attemptUuid: PublicUuid,
   data: {
     answers: Array<{
-      question_id: number;
-      answer_id?: number;
+      question_uuid: PublicUuid;
+      answer_uuid?: PublicUuid;
       answer_text?: string;
       time_spent?: number;
     }>;
   }
 ) => {
-  const response = await api.post(`/exam-attempts/${attemptId}/submit-answers-bulk`, data);
+  const response = await api.post(`/exam-attempts/${attemptUuid}/submit-answers-bulk`, data);
   return response.data;
 };

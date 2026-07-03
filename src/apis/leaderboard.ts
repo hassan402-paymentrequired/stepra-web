@@ -3,7 +3,7 @@ import api from '@/lib/api';
 export interface LeaderboardUser {
   rank: number;
   user: {
-    id: number;
+    uuid: string;
     name: string;
     email: string;
   };

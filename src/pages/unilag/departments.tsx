@@ -8,9 +8,11 @@ import { EmptyStateCard } from "@/components/empty-state/EmptyStateCard";
 import { getApiErrorMessage } from "@/utils";
 import type { AxiosError } from "axios";
 import { useExamSelection } from "@/contexts/ExamSelectionContext";
+import { useResolveExamCategory } from "@/hooks/useResolveExamCategory";
 
 const UnilagDepartments = () => {
   const { selection } = useExamSelection();
+  useResolveExamCategory({ flowType: "departmental" });
   const examLabel = selection.examTypeName || "UNILAG";
   const navigate = useNavigate();
   const { data: user } = useUser();
@@ -45,8 +47,8 @@ const UnilagDepartments = () => {
     }
   };
 
-  const handleSelectDepartment = (departmentId: number) => {
-    navigate(`/unilag/departments/${departmentId}/subjects`);
+  const handleSelectDepartment = (departmentUuid: string) => {
+    navigate(`/unilag/departments/${departmentUuid}/subjects`);
   };
 
   if (loading) {
@@ -107,8 +109,8 @@ const UnilagDepartments = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {departments.map((department) => (
                 <div
-                  key={department.id}
-                  onClick={() => handleSelectDepartment(department.id)}
+                  key={department.uuid}
+                  onClick={() => handleSelectDepartment(department.uuid)}
                   className="group relative p-6 bg-card border border-border rounded-lg hover:shadow-lg transition-all cursor-pointer hover:border-primary"
                 >
                   <div className="flex items-start gap-4">

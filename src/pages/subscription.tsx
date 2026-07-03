@@ -150,7 +150,7 @@ const Subscription = () => {
     setProcessing(true);
     try {
       const response = await initializePayment({
-        plan_id: plan.id,
+        plan_uuid: plan.uuid,
       });
 
       if (response.success && response.data) {

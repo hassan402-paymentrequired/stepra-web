@@ -18,17 +18,21 @@ import { EmptyStateCard } from "@/components/empty-state/EmptyStateCard";
 import { getApiErrorMessage } from "@/utils";
 import type { AxiosError } from "axios";
 import { useExamSelection } from "@/contexts/ExamSelectionContext";
+import { useResolveExamCategory } from "@/hooks/useResolveExamCategory";
 import { toast } from "sonner";
 
 const UnilagDepartmentSubjects = () => {
   const { selection } = useExamSelection();
-  const examType = selection.examTypeSlug || selection.examType?.toString() || "UNILAG";
+  const { ready: categoryReady, examCategoryUuid } = useResolveExamCategory({
+    flowType: "departmental",
+  });
+  const examType = examCategoryUuid || selection.examCategoryUuid || '';
   const navigate = useNavigate();
-  const { departmentId } = useParams<{ departmentId: string }>();
+  const { departmentUuid } = useParams<{ departmentUuid: string }>();
   const { data: user } = useUser();
-  const [subjects, setSubjects] = useState<Array<{ id: number; name: string; slug: string; tests?: Array<{ id: number; name: string }> }>>([]);
+  const [subjects, setSubjects] = useState<Array<{ uuid: string; name: string; slug: string; tests?: Array<{ uuid: string; name: string }> }>>([]);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-  const [selectedTestId, setSelectedTestId] = useState<number | null>(null);
+  const [selectedTestUuid, setSelectedTestUuid] = useState<string | null>(null);
   const [questionCount, setQuestionCount] = useState<number | null>(null);
   const [timeMinutes, setTimeMinutes] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,21 +60,23 @@ const UnilagDepartmentSubjects = () => {
       return;
     }
 
-    if (!departmentId) {
+    if (!departmentUuid) {
       navigate("/unilag/departments");
       return;
     }
 
+    if (!categoryReady || !examType) return;
+
     loadSubjects();
-  }, [user, navigate, departmentId]);
+  }, [user, navigate, departmentUuid, categoryReady, examType]);
 
   const loadSubjects = async () => {
-    if (!departmentId) return;
+    if (!departmentUuid || !examType) return;
 
     try {
       setLoading(true);
       setLoadError(null);
-      const response = await getDepartmentSubjects(parseInt(departmentId), examType as 'DLI' | 'UNILAG');
+      const response = await getDepartmentSubjects(departmentUuid, examType);
 
       if (!response.success) {
         throw new Error("Failed to load subjects");
@@ -120,7 +126,7 @@ const UnilagDepartmentSubjects = () => {
         subjects: [{
           subject: selectedSubject,
           question_count: questionCount,
-          subject_test_id: selectedTestId ?? undefined,
+          subject_test_uuid: selectedTestUuid ?? undefined,
         }],
         duration_minutes: timeMinutes,
       });
@@ -142,14 +148,14 @@ const UnilagDepartmentSubjects = () => {
 
       navigate("/exam/screen", {
         state: {
-          attemptId: attempt.id,
-          examId: attempt.exam_id || 0,
+          attemptUuid: attempt.uuid,
+          examUuid: attempt.exam_uuid || undefined,
           subjectsQuestions: {
             [selectedSubject]: allQuestions,
           },
           exam: {
-            id: attempt.exam_id || 0,
-            title: `${examType} ${selectedSubject} Practice Questions`,
+            uuid: attempt.exam_uuid || undefined,
+            title: `${examLabel} ${selectedSubject} Practice Questions`,
             duration: timeMinutes,
             total_questions: allQuestions.length,
           },
@@ -265,9 +271,9 @@ const UnilagDepartmentSubjects = () => {
                 onClick={() => setShowTestModal(true)}
                 className="w-full p-4 border border-border rounded-lg text-left flex items-center justify-between hover:bg-accent transition-colors"
               >
-                <span className={selectedTestId ? "" : "text-muted-foreground"}>
-                  {selectedTestId
-                    ? testsForSubject.find((t) => t.id === selectedTestId)?.name
+                <span className={selectedTestUuid ? "" : "text-muted-foreground"}>
+                  {selectedTestUuid
+                    ? testsForSubject.find((t) => t.uuid === selectedTestUuid)?.name
                     : "Choose a test"}
                 </span>
                 <ChevronDown className="h-5 w-5 text-muted-foreground" />
@@ -276,7 +282,7 @@ const UnilagDepartmentSubjects = () => {
           )}
 
           {/* Question Count Selection - show when subject selected, and when test required: after test selected */}
-          {selectedSubject && (!requiresTestSelection || selectedTestId) && (
+          {selectedSubject && (!requiresTestSelection || selectedTestUuid) && (
             <div className="mb-6">
               <label className="block text-sm font-medium mb-2">
                 Number of Questions *
@@ -313,7 +319,7 @@ const UnilagDepartmentSubjects = () => {
 
           {/* Start Practice Button */}
           {selectedSubject &&
-            (!requiresTestSelection || selectedTestId) &&
+            (!requiresTestSelection || selectedTestUuid) &&
             questionCount &&
             timeMinutes && (
               <Button
@@ -337,7 +343,7 @@ const UnilagDepartmentSubjects = () => {
             selectedValue={selectedSubject}
             onSelect={(name) => {
               setSelectedSubject(name);
-              setSelectedTestId(null);
+              setSelectedTestUuid(null);
               setQuestionCount(null);
               setTimeMinutes(null);
             }}
@@ -350,12 +356,12 @@ const UnilagDepartmentSubjects = () => {
             title="Select Test"
             subtitle={selectedSubject ? `for ${selectedSubject}` : undefined}
             options={testsForSubject.map((test) => ({
-              value: test.id,
+              value: test.uuid,
               label: test.name,
             }))}
-            selectedValue={selectedTestId}
-            onSelect={(testId) => {
-              setSelectedTestId(testId);
+            selectedValue={selectedTestUuid}
+            onSelect={(testUuid) => {
+              setSelectedTestUuid(testUuid);
               setQuestionCount(null);
               setTimeMinutes(null);
             }}

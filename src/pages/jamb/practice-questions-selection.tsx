@@ -16,8 +16,8 @@ import { toast } from 'sonner';
 const JAMBPracticeQuestionsSelection = () => {
   const navigate = useNavigate();
   const { selection, setQuestionCount, setTimeMinutes } = useExamSelection();
-  const { examTypeSlug, examLabel } = useExamRouteSlug();
-  const examType = examTypeSlug || selection.examTypeSlug || selection.examType?.toString() || 'JAMB';
+  const { examLabel, examCategoryUuid } = useExamRouteSlug();
+  const examType = examCategoryUuid || selection.examCategoryUuid || '';
   const examTypeLabel = examLabel || selection.examTypeName || 'JAMB';
 
   // Core state
@@ -187,11 +187,11 @@ const JAMBPracticeQuestionsSelection = () => {
 
       navigate('/exam/screen', {
         state: {
-          attemptId: attempt.id,
-          examId: attempt.exam_id || 0,
+          attemptUuid: attempt.uuid,
+          examUuid: attempt.exam_uuid || undefined,
           subjectsQuestions,
           exam: {
-            id: attempt.exam_id || 0,
+            uuid: attempt.exam_uuid || undefined,
             title: `${examTypeLabel} Practice`,
             duration: timeMinutesNum,
             total_questions: totalQ,

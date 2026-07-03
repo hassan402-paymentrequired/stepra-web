@@ -1,11 +1,11 @@
-import type { Question } from '@/apis/exam';
+import type { PublicUuid, Question } from '@/types/exam';
 
 export interface ExamScreenSession {
-  attemptId: number;
-  examId: number;
+  attemptUuid: PublicUuid;
+  examUuid?: PublicUuid;
   subjectsQuestions: Record<string, Question[]>;
   exam: {
-    id: number;
+    uuid?: PublicUuid;
     title: string;
     duration: number;
     total_questions: number;
@@ -26,7 +26,11 @@ export const loadExamSession = (): ExamScreenSession | null => {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as ExamScreenSession;
+    const parsed = JSON.parse(raw) as ExamScreenSession & { attemptId?: number };
+    if (!parsed.attemptUuid && parsed.attemptId) {
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -43,22 +47,22 @@ export const getRemainingSeconds = (session: ExamScreenSession): number => {
 };
 
 export interface ExamProgress {
-  selectedAnswers: Record<number, number | string>;
-  textInputAnswers: Record<number, string>;
+  selectedAnswers: Record<string, string>;
+  textInputAnswers: Record<string, string>;
   subjectCurrentIndex: Record<string, number>;
   currentSubject: string;
-  questionStartTime: Record<number, number>;
+  questionStartTime: Record<string, number>;
 }
 
-const progressKey = (attemptId: number) => `exam_progress_${attemptId}`;
+const progressKey = (attemptUuid: PublicUuid) => `exam_progress_${attemptUuid}`;
 
-export const saveExamProgress = (attemptId: number, progress: ExamProgress) => {
-  sessionStorage.setItem(progressKey(attemptId), JSON.stringify(progress));
+export const saveExamProgress = (attemptUuid: PublicUuid, progress: ExamProgress) => {
+  sessionStorage.setItem(progressKey(attemptUuid), JSON.stringify(progress));
 };
 
-export const loadExamProgress = (attemptId: number): ExamProgress | null => {
+export const loadExamProgress = (attemptUuid: PublicUuid): ExamProgress | null => {
   try {
-    const raw = sessionStorage.getItem(progressKey(attemptId));
+    const raw = sessionStorage.getItem(progressKey(attemptUuid));
     if (!raw) return null;
     return JSON.parse(raw) as ExamProgress;
   } catch {
@@ -66,6 +70,6 @@ export const loadExamProgress = (attemptId: number): ExamProgress | null => {
   }
 };
 
-export const clearExamProgress = (attemptId: number) => {
-  sessionStorage.removeItem(progressKey(attemptId));
+export const clearExamProgress = (attemptUuid: PublicUuid) => {
+  sessionStorage.removeItem(progressKey(attemptUuid));
 };

@@ -16,7 +16,7 @@ interface UseScreenshotPreventionOptions {
   onSuspiciousActivity?: (type: string) => void;
   watermarkText?: string;
   strictMode?: boolean;
-  attemptId?: number;
+  attemptUuid?: string;
   logToBackend?: boolean;
 }
 
@@ -33,7 +33,7 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
     onSuspiciousActivity,
     watermarkText = 'CONFIDENTIAL',
     strictMode = false,
-    attemptId,
+    attemptUuid,
     logToBackend = true
   } = options;
 
@@ -65,7 +65,7 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
     // Send each violation (they're already queued, so we can send them)
     for (const violation of violationsToSend) {
       try {
-        await logViolationWithContext(violation.type, violation.details, attemptId);
+        await logViolationWithContext(violation.type, violation.details, attemptUuid);
       } catch (error) {
         console.error('Failed to log security violation:', error);
         // Re-queue failed violations (optional - you might want to drop them)
@@ -97,7 +97,7 @@ export const useScreenshotPrevention = (options: UseScreenshotPreventionOptions 
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, logToBackend, attemptId]);
+  }, [enabled, logToBackend, attemptUuid]);
 
   useEffect(() => {
     if (!enabled) return;

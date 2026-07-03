@@ -1,7 +1,7 @@
 import api from '@/lib/api';
 
 export interface SubscriptionPlan {
-  id: number;
+  uuid: string;
   name: string;
   description: string;
   price: number;
@@ -18,9 +18,11 @@ export interface SubscriptionStatus {
   subscription_expires_at: string | null;
   subscription_device_bound?: boolean;
   subscription: {
-    id: number;
+    uuid: string;
     type: string;
+    status?: string;
     plan: {
+      uuid?: string;
       name: string;
       price: number;
     };
@@ -29,7 +31,7 @@ export interface SubscriptionStatus {
 }
 
 export interface InitializePaymentRequest {
-  plan_id: number;
+  plan_uuid: string;
   referral_code?: string;
 }
 
@@ -39,7 +41,7 @@ export interface InitializePaymentResponse {
     authorization_url: string;
     access_code: string;
     reference: string;
-    subscription_id: number;
+    subscription_uuid: string;
     callback_url: string;
     cancel_url: string;
   };
@@ -54,7 +56,7 @@ export interface VerifyPaymentResponse {
   message: string;
   data?: {
     subscription: {
-      id: number;
+      uuid: string;
       status: string;
       expires_at: string;
     };

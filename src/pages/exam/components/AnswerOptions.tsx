@@ -3,9 +3,9 @@ import type { Question } from "@/apis/exam";
 
 interface AnswerOptionsProps {
   question: Question;
-  selectedAnswerId: number | undefined;
+  selectedAnswerId: string | undefined;
   textAnswer: string;
-  onAnswerSelect: (answerId: number) => void;
+  onAnswerSelect: (answerUuid: string) => void;
   onTextAnswerChange: (value: string) => void;
 }
 
@@ -21,18 +21,18 @@ export const AnswerOptions = ({
       <div className="space-y-3">
         {question.answers?.map((answer) => (
           <label
-            key={answer.id}
+            key={answer.uuid}
             className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-              selectedAnswerId === answer.id
+              selectedAnswerId === answer.uuid
                 ? "border-primary bg-primary/5"
                 : "border-border hover:border-primary/50"
             }`}
           >
             <input
               type="radio"
-              name={`question-${question.id}`}
-              checked={selectedAnswerId === answer.id}
-              onChange={() => onAnswerSelect(answer.id)}
+              name={`question-${question.uuid}`}
+              checked={selectedAnswerId === answer.uuid}
+              onChange={() => onAnswerSelect(answer.uuid)}
               className="mt-1 h-4 w-4 text-primary focus:ring-primary"
             />
             <span className="flex-1 text-sm leading-relaxed">
@@ -45,7 +45,6 @@ export const AnswerOptions = ({
   }
 
   if (question.question_type === "true_false") {
-    // Try multiple ways to find the answers
     const trueAnswer = question.answers?.find(
       (a) => {
         const text = a.answer_text.toLowerCase().trim();
@@ -60,75 +59,30 @@ export const AnswerOptions = ({
       }
     ) || question.answers?.find((a, idx) => idx === 1 && a.answer_text.toLowerCase().includes("false"));
     
-    // Debug: Log if answers are not found
-    if (!trueAnswer || !falseAnswer) {
-      console.warn('True/False answers not found:', {
-        questionId: question.id,
-        answers: question.answers,
-        trueAnswer,
-        falseAnswer,
-      });
-    }
-    
-    // If answers don't exist, create virtual answers as fallback
-    // This should not happen if backend is working correctly, but provides safety
-    const virtualTrueId = trueAnswer?.id ?? -1000 - question.id;
-    const virtualFalseId = falseAnswer?.id ?? -2000 - question.id;
-    
-    if (!trueAnswer || !falseAnswer) {
-      console.error('True/False answers missing - using virtual IDs', {
-        questionId: question.id,
-        answers: question.answers,
-        virtualTrueId,
-        virtualFalseId,
-      });
-    }
+    const virtualTrueId = trueAnswer?.uuid ?? `virtual-true-${question.uuid}`;
+    const virtualFalseId = falseAnswer?.uuid ?? `virtual-false-${question.uuid}`;
     
     return (
       <div className="flex gap-4 relative" style={{ zIndex: 10001, isolation: 'isolate' }}>
         <button
           type="button"
-          data-answer-id={trueAnswer?.id ?? virtualTrueId}
-          data-question-id={question.id}
-          onClick={() => {
-            const answerId = trueAnswer?.id ?? virtualTrueId;
-            onAnswerSelect(answerId);
-          }}
+          onClick={() => onAnswerSelect(trueAnswer?.uuid ?? virtualTrueId)}
           className={`flex-1 p-6 text-lg font-semibold border-2 rounded-lg transition-all relative cursor-pointer ${
-            selectedAnswerId === (trueAnswer?.id ?? virtualTrueId)
+            selectedAnswerId === (trueAnswer?.uuid ?? virtualTrueId)
               ? "border-primary bg-primary/10 text-primary ring-2 ring-primary ring-offset-2"
               : "border-border hover:border-primary/50 bg-background"
           }`}
-          style={{ 
-            zIndex: 10002,
-            pointerEvents: 'auto',
-            position: 'relative',
-            WebkitTapHighlightColor: 'transparent',
-            touchAction: 'manipulation',
-          }}
         >
           True
         </button>
         <button
           type="button"
-          data-answer-id={falseAnswer?.id ?? virtualFalseId}
-          data-question-id={question.id}
-          onClick={() => {
-            const answerId = falseAnswer?.id ?? virtualFalseId;
-            onAnswerSelect(answerId);
-          }}
+          onClick={() => onAnswerSelect(falseAnswer?.uuid ?? virtualFalseId)}
           className={`flex-1 p-6 text-lg font-semibold border-2 rounded-lg transition-all relative cursor-pointer ${
-            selectedAnswerId === (falseAnswer?.id ?? virtualFalseId)
+            selectedAnswerId === (falseAnswer?.uuid ?? virtualFalseId)
               ? "border-primary bg-primary/10 text-primary ring-2 ring-primary ring-offset-2"
               : "border-border hover:border-primary/50 bg-background"
           }`}
-          style={{ 
-            zIndex: 10002,
-            pointerEvents: 'auto',
-            position: 'relative',
-            WebkitTapHighlightColor: 'transparent',
-            touchAction: 'manipulation',
-          }}
         >
           False
         </button>

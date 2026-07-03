@@ -1,5 +1,7 @@
+import type { PublicUuid } from '@/types/exam';
+
 export interface StoredExamSelection {
-  id: number;
+  uuid: PublicUuid;
   slug: string;
   name: string;
   flow_type: 'standard' | 'departmental';
@@ -15,14 +17,18 @@ export const getStoredExamSelection = (): StoredExamSelection | null => {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as StoredExamSelection;
+    const parsed = JSON.parse(raw) as StoredExamSelection & { id?: number };
+    if (!parsed.uuid && parsed.id) {
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
 };
 
-export const getStoredExamType = (): string | null => {
-  return getStoredExamSelection()?.slug ?? null;
+export const getStoredExamCategoryUuid = (): PublicUuid | null => {
+  return getStoredExamSelection()?.uuid ?? null;
 };
 
 export const clearStoredExamSelection = () => {

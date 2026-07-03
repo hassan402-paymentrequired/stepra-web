@@ -7,8 +7,8 @@ interface ExamNavigationProps {
   allSubjectsCompleted: boolean;
   subjectsQuestions: Record<string, any[]>;
   currentSubject: string;
-  selectedAnswers: Record<number, number>;
-  textInputAnswers: Record<number, string>;
+  selectedAnswers: Record<string, string>;
+  textInputAnswers: Record<string, string>;
   loading: boolean;
   onPrevious: () => void;
   onNext: () => void;
@@ -43,11 +43,11 @@ export const ExamNavigation = ({
             q.question_type === "multiple_choice" ||
             q.question_type === "true_false"
           ) {
-            return selectedAnswers[q.id] === undefined;
+            return selectedAnswers[q.uuid] === undefined;
           } else {
             return (
-              !textInputAnswers[q.id] ||
-              textInputAnswers[q.id] === ""
+              !textInputAnswers[q.uuid] ||
+              textInputAnswers[q.uuid] === ""
             );
           }
         });

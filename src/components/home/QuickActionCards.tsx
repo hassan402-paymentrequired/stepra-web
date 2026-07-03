@@ -27,7 +27,7 @@ export function QuickActionCards({ categories, onCategoryPress }: QuickActionCar
 
           return (
             <button
-              key={category.id}
+              key={category.uuid}
               type="button"
               onClick={() => onCategoryPress(category)}
               className="w-full flex items-center gap-4 p-4 text-left hover:bg-muted/50 transition-colors"

@@ -8,7 +8,7 @@ export interface AnalyticsData {
     total_time_spent: number;
   };
   recent_attempts: Array<{
-    id: number;
+    uuid: string;
     exam_title: string;
     score: number;
     percentage: number;

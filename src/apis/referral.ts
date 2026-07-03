@@ -8,7 +8,7 @@ export interface ReferralStatistics {
 }
 
 export interface RecentReferral {
-  id: number;
+  uuid: string;
   referred_user: {
     name: string;
     email: string;

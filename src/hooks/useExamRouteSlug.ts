@@ -25,7 +25,7 @@ export function useExamRouteSlug() {
       );
 
       if (category) {
-        setExamType(category.id, category.slug, category.name, category.flow_type);
+        setExamType(category.uuid, category.slug, category.name, category.flow_type);
       } else {
         navigate('/dashboard', { replace: true });
       }
@@ -38,6 +38,7 @@ export function useExamRouteSlug() {
 
   return {
     routeSlug,
+    examCategoryUuid: selection.examCategoryUuid,
     examTypeSlug: selection.examTypeSlug || routeSlug || 'JAMB',
     examLabel: selection.examTypeName || routeSlug || 'JAMB',
   };

@@ -3,7 +3,7 @@ import api from '@/lib/api';
 export interface SecurityViolation {
   type: 'screenshot_attempt' | 'context_menu' | 'keyboard_shortcut' | 'window_blur' | 'window_hidden' | 'potential_screen_recording';
   details?: Record<string, any>;
-  attempt_id?: number;
+  attempt_uuid?: string;
   url?: string;
   user_agent?: string;
 }
@@ -35,7 +35,7 @@ export const logSecurityViolation = async (violation: SecurityViolation): Promis
   const response = await api.post('/security/violations', {
     type: violation.type,
     details: violation.details,
-    attempt_id: violation.attempt_id,
+    attempt_uuid: violation.attempt_uuid,
     url: violation.url || window.location.href,
     user_agent: violation.user_agent || navigator.userAgent,
   });
@@ -56,7 +56,7 @@ export const getSecurityStatus = async (): Promise<SecurityStatusResponse> => {
 export const logViolationWithContext = async (
   type: SecurityViolation['type'],
   additionalDetails?: Record<string, any>,
-  attemptId?: number
+  attemptUuid?: string
 ) => {
   try {
     const violation: SecurityViolation = {
@@ -68,7 +68,7 @@ export const logViolationWithContext = async (
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         ...additionalDetails,
       },
-      attempt_id: attemptId,
+      attempt_uuid: attemptUuid,
       url: window.location.href,
       user_agent: navigator.userAgent,
     };

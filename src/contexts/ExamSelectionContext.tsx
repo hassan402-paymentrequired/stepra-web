@@ -11,12 +11,13 @@ import {
   clearStoredExamSelection,
 } from '@/lib/exam-selection-storage';
 import { isJambExamSlug } from '@/lib/exam-routes';
+import type { PublicUuid } from '@/types/exam';
 
-export type ExamType = string | number | null;
 export type QuestionMode = 'past_question' | 'practice' | null;
 
 export interface ExamSelectionState {
-  examType: ExamType;
+  /** Public exam category UUID sent to the API as exam_type */
+  examCategoryUuid: PublicUuid | null;
   examTypeSlug: string | null;
   examTypeName: string | null;
   flowType: 'standard' | 'departmental' | null;
@@ -30,7 +31,7 @@ export interface ExamSelectionState {
 interface ExamSelectionContextType {
   selection: ExamSelectionState;
   setExamType: (
-    id: ExamType,
+    uuid: PublicUuid,
     slug: string,
     name: string,
     flowType: 'standard' | 'departmental'
@@ -50,7 +51,7 @@ interface ExamSelectionContextType {
 }
 
 const initialState: ExamSelectionState = {
-  examType: null,
+  examCategoryUuid: null,
   examTypeSlug: null,
   examTypeName: null,
   flowType: null,
@@ -67,7 +68,7 @@ const hydrateFromStorage = (): ExamSelectionState => {
 
   return {
     ...initialState,
-    examType: stored.id,
+    examCategoryUuid: stored.uuid,
     examTypeSlug: stored.slug,
     examTypeName: stored.name,
     flowType: stored.flow_type,
@@ -83,9 +84,9 @@ export function ExamSelectionProvider({ children }: { children: ReactNode }) {
   const [practiceSessions, setPracticeSessions] = useState<Record<string, number>>({});
 
   const setExamType = useCallback(
-    (id: ExamType, slug: string, name: string, flowType: 'standard' | 'departmental') => {
+    (uuid: PublicUuid, slug: string, name: string, flowType: 'standard' | 'departmental') => {
       storeExamSelection({
-        id: typeof id === 'number' ? id : 0,
+        uuid,
         slug,
         name,
         flow_type: flowType,
@@ -93,7 +94,7 @@ export function ExamSelectionProvider({ children }: { children: ReactNode }) {
 
       setSelection((prev) => ({
         ...prev,
-        examType: id,
+        examCategoryUuid: uuid,
         examTypeSlug: slug,
         examTypeName: name,
         flowType,

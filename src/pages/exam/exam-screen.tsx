@@ -31,11 +31,11 @@ import { SubjectSelectorModal } from "./components/SubjectSelectorModal";
 import { ExamNavigation } from "./components/ExamNavigation";
 
 interface ExamScreenLocationState {
-  attemptId: number;
-  examId: number;
+  attemptUuid: string;
+  examUuid?: string;
   subjectsQuestions: Record<string, Question[]>;
   exam: {
-    id: number;
+    uuid?: string;
     title: string;
     duration: number;
     total_questions: number;
@@ -48,7 +48,7 @@ interface ExamScreenLocationState {
 const resolveExamSession = (
   locationState: ExamScreenLocationState | null
 ): ExamScreenSession | null => {
-  if (locationState?.attemptId && locationState.subjectsQuestions) {
+  if (locationState?.attemptUuid && locationState.subjectsQuestions) {
     const session: ExamScreenSession = {
       ...locationState,
       startedAt: Date.now(),
@@ -64,8 +64,8 @@ const ExamScreen = () => {
   const location = useLocation();
   const locationState = location.state as ExamScreenLocationState | null;
   const examSession = resolveExamSession(locationState);
-  const savedProgress = examSession?.attemptId
-    ? loadExamProgress(examSession.attemptId)
+  const savedProgress = examSession?.attemptUuid
+    ? loadExamProgress(examSession.attemptUuid)
     : null;
   const { data: user } = useUser();
 
@@ -74,13 +74,13 @@ const ExamScreen = () => {
     enabled: true,
     strictMode: true,
     logToBackend: true,
-    attemptId: examSession?.attemptId,
+    attemptUuid: examSession?.attemptUuid,
     watermarkText: user ? `${user.name} - ${user.email} - Practice Session` : 'CONFIDENTIAL - PRACTICE SESSION',
     onScreenshotAttempt: () => {
-      console.warn('Screenshot attempt detected for user:', user?.email, 'in attempt:', examSession?.attemptId);
+      console.warn('Screenshot attempt detected for user:', user?.email, 'in attempt:', examSession?.attemptUuid);
     },
     onSuspiciousActivity: (type) => {
-      console.warn('Suspicious activity detected:', type, 'by user:', user?.email, 'in attempt:', examSession?.attemptId);
+      console.warn('Suspicious activity detected:', type, 'by user:', user?.email, 'in attempt:', examSession?.attemptUuid);
     },
   });
 
@@ -399,10 +399,10 @@ const ExamScreen = () => {
   );
 
   // Answer state
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number | string>>(
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>(
     () => savedProgress?.selectedAnswers ?? {}
   );
-  const [textInputAnswers, setTextInputAnswers] = useState<Record<number, string>>(
+  const [textInputAnswers, setTextInputAnswers] = useState<Record<string, string>>(
     () => savedProgress?.textInputAnswers ?? {}
   );
 
@@ -416,13 +416,13 @@ const ExamScreen = () => {
   const [showConfirmSubmitModal, setShowConfirmSubmitModal] = useState(false);
   const [unansweredSubjectsCount, setUnansweredSubjectsCount] = useState(0);
   const [isFooterExpanded, setIsFooterExpanded] = useState(false);
-  const [questionStartTime, setQuestionStartTime] = useState<Record<number, number>>(
+  const [questionStartTime, setQuestionStartTime] = useState<Record<string, number>>(
     () => savedProgress?.questionStartTime ?? {}
   );
 
   useEffect(() => {
-    if (!examSession?.attemptId) return;
-    saveExamProgress(examSession.attemptId, {
+    if (!examSession?.attemptUuid) return;
+    saveExamProgress(examSession.attemptUuid, {
       selectedAnswers,
       textInputAnswers,
       subjectCurrentIndex,
@@ -430,7 +430,7 @@ const ExamScreen = () => {
       questionStartTime,
     });
   }, [
-    examSession?.attemptId,
+    examSession?.attemptUuid,
     selectedAnswers,
     textInputAnswers,
     subjectCurrentIndex,
@@ -488,7 +488,7 @@ const ExamScreen = () => {
   } = memoizedData;
 
   const submitAllAnswers = useCallback(async () => {
-    if (!examSession?.attemptId) return;
+    if (!examSession?.attemptUuid) return;
 
     const answers = buildAnswersPayload(
       selectedAnswers,
@@ -497,19 +497,19 @@ const ExamScreen = () => {
     );
 
     if (answers.length > 0) {
-      await submitAnswersBulk(examSession.attemptId, { answers });
+      await submitAnswersBulk(examSession.attemptUuid, { answers });
     }
   }, [examSession, selectedAnswers, textInputAnswers, questionStartTime]);
 
   const proceedWithSubmission = useCallback(async () => {
-    if (!examSession?.attemptId) return;
+    if (!examSession?.attemptUuid) return;
 
     try {
       setLoading(true);
       autoSubmitRef.current = true;
 
       await submitAllAnswers();
-      await completeExamAttempt(examSession.attemptId, {
+      await completeExamAttempt(examSession.attemptUuid, {
         subjects: examSession.subjects?.map((subject) => ({
           subject,
           question_count: subjectsQuestions[subject]?.length || 0,
@@ -525,10 +525,10 @@ const ExamScreen = () => {
       }
 
       clearExamSession();
-      clearExamProgress(examSession.attemptId);
+      clearExamProgress(examSession.attemptUuid);
       navigate("/exam/results", {
         state: {
-          attemptId: examSession.attemptId,
+          attemptUuid: examSession.attemptUuid,
           isPracticeSession: examSession?.isPractice === true,
         },
       });
@@ -545,7 +545,7 @@ const ExamScreen = () => {
 
   const handleCompleteExam = useCallback(
     async (autoSubmit = false) => {
-      if (!examSession?.attemptId) return;
+      if (!examSession?.attemptUuid) return;
 
       const unansweredSubjects = Object.keys(subjectsQuestions).filter(
         (subject) => {
@@ -555,9 +555,9 @@ const ExamScreen = () => {
               q.question_type === "multiple_choice" ||
               q.question_type === "true_false"
             ) {
-              return selectedAnswers[q.id] === undefined;
+              return selectedAnswers[q.uuid] === undefined;
             }
-            return !textInputAnswers[q.id] || textInputAnswers[q.id] === "";
+            return !textInputAnswers[q.uuid] || textInputAnswers[q.uuid] === "";
           });
         }
       );
@@ -574,14 +574,14 @@ const ExamScreen = () => {
   );
 
   const handleAutoSubmit = useCallback(async (reason: 'user_exit' | 'timeout' | 'manual' = 'user_exit') => {
-    if (autoSubmitRef.current || !examSession?.attemptId) return;
+    if (autoSubmitRef.current || !examSession?.attemptUuid) return;
 
     autoSubmitRef.current = true;
     setLoading(true);
 
     try {
       await submitAllAnswers();
-      await completeExamAttempt(examSession.attemptId);
+      await completeExamAttempt(examSession.attemptUuid);
       try {
         await recordStreak();
         void promptPushAfterStreak();
@@ -589,12 +589,12 @@ const ExamScreen = () => {
         // Non-blocking
       }
       clearExamSession();
-      clearExamProgress(examSession.attemptId);
+      clearExamProgress(examSession.attemptUuid);
 
       toast.success(`Practice session ${reason === 'user_exit' ? 'auto-submitted' : 'completed'} successfully!`);
       navigate('/exam/results', {
         state: {
-          attemptId: examSession.attemptId,
+          attemptUuid: examSession.attemptUuid,
           autoSubmitted: reason === 'user_exit',
           isPracticeSession: examSession?.isPractice === true,
         },
@@ -619,7 +619,7 @@ const ExamScreen = () => {
       e.returnValue = message;
 
       // Auto-complete the attempt (answers are already submitted as user progresses)
-      if (!isSubmitting && examSession?.attemptId && !autoSubmitRef.current) {
+      if (!isSubmitting && examSession?.attemptUuid && !autoSubmitRef.current) {
         isSubmitting = true;
         autoSubmitRef.current = true;
 
@@ -635,12 +635,12 @@ const ExamScreen = () => {
         if (navigator.sendBeacon) {
           const data = JSON.stringify(completeData);
           navigator.sendBeacon(
-            `/api/exam-attempts/${examSession.attemptId}/complete`,
+            `/api/exam-attempts/${examSession.attemptUuid}/complete`,
             new Blob([data], { type: 'application/json' })
           );
         } else {
           // Fallback for browsers without sendBeacon
-          fetch(`/api/exam-attempts/${examSession.attemptId}/complete`, {
+          fetch(`/api/exam-attempts/${examSession.attemptUuid}/complete`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(completeData),
@@ -690,15 +690,15 @@ const ExamScreen = () => {
       const startTime = Date.now();
       setQuestionStartTime((prev) => ({
         ...prev,
-        [currentQuestion.id]: startTime,
+        [currentQuestion.uuid]: startTime,
       }));
     }
-  }, [currentQuestion?.id]);
+  }, [currentQuestion?.uuid]);
 
   // Timer effect
   useEffect(() => {
     if (timeRemaining <= 0) {
-      if (examSession?.attemptId) {
+      if (examSession?.attemptUuid) {
         handleCompleteExam(true);
       }
       return;
@@ -709,23 +709,23 @@ const ExamScreen = () => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [timeRemaining, examSession?.attemptId, handleCompleteExam]);
+  }, [timeRemaining, examSession?.attemptUuid, handleCompleteExam]);
 
-  const handleSelectAnswer = (answerId: number) => {
-    if (!currentQuestion || !examSession?.attemptId) return;
+  const handleSelectAnswer = (answerUuid: string) => {
+    if (!currentQuestion || !examSession?.attemptUuid) return;
 
     setSelectedAnswers({
       ...selectedAnswers,
-      [currentQuestion.id]: answerId,
+      [currentQuestion.uuid]: answerUuid,
     });
   };
 
   const handleTextInputChange = (value: string) => {
-    if (!currentQuestion || !examSession?.attemptId) return;
+    if (!currentQuestion || !examSession?.attemptUuid) return;
 
     setTextInputAnswers({
       ...textInputAnswers,
-      [currentQuestion.id]: value,
+      [currentQuestion.uuid]: value,
     });
   };
 
@@ -886,8 +886,8 @@ const ExamScreen = () => {
     );
   }
 
-  const selectedAnswerId = selectedAnswers[currentQuestion.id];
-  const textAnswer = textInputAnswers[currentQuestion.id] || "";
+  const selectedAnswerId = selectedAnswers[currentQuestion.uuid];
+  const textAnswer = textInputAnswers[currentQuestion.uuid] || "";
   const isLastQuestionInSubject =
     currentQuestionIndex === totalQuestionsForSubject - 1;
 
@@ -981,7 +981,7 @@ const ExamScreen = () => {
           <div className="mt-8 relative" style={{ zIndex: 10001 }}>
             <AnswerOptions
               question={currentQuestion}
-              selectedAnswerId={selectedAnswerId as number | undefined}
+              selectedAnswerId={selectedAnswerId}
               textAnswer={textAnswer}
               onAnswerSelect={handleSelectAnswer}
               onTextAnswerChange={(value) => {
@@ -1031,13 +1031,13 @@ const ExamScreen = () => {
                 const isAnswered =
                   (q.question_type === "multiple_choice" ||
                     q.question_type === "true_false"
-                    ? selectedAnswers[q.id] !== undefined
-                    : textInputAnswers[q.id] !== undefined &&
-                    textInputAnswers[q.id] !== "") || false;
+                    ? selectedAnswers[q.uuid] !== undefined
+                    : textInputAnswers[q.uuid] !== undefined &&
+                    textInputAnswers[q.uuid] !== "") || false;
                 const isCurrent = index === currentQuestionIndex;
                 return (
                   <button
-                    key={q.id}
+                    key={q.uuid}
                     onClick={() => goToQuestion(index)}
                     className={`w-10 h-10 rounded border-2 flex items-center justify-center text-sm font-medium transition-colors ${isCurrent
                         ? "bg-primary border-primary !text-primary-foreground"
@@ -1060,7 +1060,7 @@ const ExamScreen = () => {
             allSubjectsCompleted={allSubjectsCompleted}
             subjectsQuestions={subjectsQuestions}
             currentSubject={currentSubject}
-            selectedAnswers={selectedAnswers as Record<number, number>}
+            selectedAnswers={selectedAnswers}
             textInputAnswers={textInputAnswers}
             loading={loading}
             onPrevious={handlePrevious}

@@ -145,9 +145,9 @@ const Leaderboard = () => {
             <div className="grid gap-2.5">
               {leaderboard.map((performer) => (
                 <LeaderboardItem
-                  key={performer.user.id}
+                  key={performer.user.uuid}
                   performer={performer}
-                  isCurrentUser={performer.user.id === currentUserRank?.user?.id}
+                  isCurrentUser={performer.user.uuid === currentUserRank?.user?.uuid}
                   getRankIcon={getRankIcon}
                   getRankBg={getRankBg}
                 />

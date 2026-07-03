@@ -14,7 +14,6 @@ import {
   JAMBModeSelection,
   JAMBPastQuestionsSelection,
   JAMBPracticeQuestionsSelection,
-  DLIPracticeSelection,
   UnilagDepartments,
   UnilagDepartmentSubjects,
   ExamScreen,
@@ -107,14 +106,14 @@ const routesObject: RouteObject[] = [
       },
       {
         path: 'dli/practice',
-        element: <DLIPracticeSelection />,
+        element: <Navigate to="/exam/dli/practice-questions" replace />,
       },
       {
         path: 'unilag/departments',
         element: <UnilagDepartments />,
       },
       {
-        path: 'unilag/departments/:departmentId/subjects',
+        path: 'unilag/departments/:departmentUuid/subjects',
         element: <UnilagDepartmentSubjects />,
       },
       {
