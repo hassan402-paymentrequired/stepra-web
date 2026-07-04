@@ -5,6 +5,8 @@ export interface NotificationSettings {
   morning_reminder_time: string;
   timezone: string;
   has_push_subscription: boolean;
+  subscription_reminder_emails_enabled: boolean;
+  marketing_emails_enabled: boolean;
 }
 
 export interface PushSubscriptionPayload {
@@ -44,7 +46,16 @@ export const getNotificationSettings = async (): Promise<NotificationSettings> =
 };
 
 export const updateNotificationSettings = async (
-  payload: Partial<Pick<NotificationSettings, 'push_notifications_enabled' | 'morning_reminder_time' | 'timezone'>>
+  payload: Partial<
+    Pick<
+      NotificationSettings,
+      | 'push_notifications_enabled'
+      | 'morning_reminder_time'
+      | 'timezone'
+      | 'subscription_reminder_emails_enabled'
+      | 'marketing_emails_enabled'
+    >
+  >
 ): Promise<NotificationSettings> => {
   const response = await api.put('/notification-settings', payload);
   return response.data.data;

@@ -37,6 +37,8 @@ export function usePushNotifications() {
         morning_reminder_time: '07:00',
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Lagos',
         has_push_subscription: false,
+        subscription_reminder_emails_enabled: true,
+        marketing_emails_enabled: false,
       });
     } finally {
       setLoading(false);
@@ -108,6 +110,27 @@ export function usePushNotifications() {
     []
   );
 
+  const saveEmailPreferences = useCallback(
+    async (
+      payload: Pick<
+        NotificationSettings,
+        'subscription_reminder_emails_enabled' | 'marketing_emails_enabled'
+      >
+    ) => {
+      setUpdating(true);
+      try {
+        const data = await updateNotificationSettings(payload);
+        setSettings(data);
+        toast.success('Email preferences saved.');
+      } catch {
+        toast.error('Could not save email preferences.');
+      } finally {
+        setUpdating(false);
+      }
+    },
+    []
+  );
+
   const notificationsEnabled = settings?.push_notifications_enabled ?? true;
 
   useEffect(() => {
@@ -137,6 +160,7 @@ export function usePushNotifications() {
     enable,
     disable,
     saveSettings,
+    saveEmailPreferences,
     refresh,
   };
 }
