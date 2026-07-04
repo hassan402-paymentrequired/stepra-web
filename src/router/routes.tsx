@@ -117,7 +117,7 @@ const routesObject: RouteObject[] = [
         element: <UnilagDepartmentSubjects />,
       },
       {
-        path: 'exam/screen',
+        path: 'exam/screen/:attemptUuid?',
         element: <ExamScreen />,
       },
       {

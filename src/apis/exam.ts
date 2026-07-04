@@ -169,6 +169,11 @@ export const getExamAttempt = async (attemptUuid: PublicUuid) => {
   return response.data;
 };
 
+export const resumeExamAttempt = async (attemptUuid: PublicUuid) => {
+  const response = await api.get(`/exam-attempts/${attemptUuid}/resume`);
+  return response.data;
+};
+
 export const getExamResults = async (attemptUuid: PublicUuid) => {
   const response = await api.get(`/exam-attempts/${attemptUuid}/results`);
   return response.data;

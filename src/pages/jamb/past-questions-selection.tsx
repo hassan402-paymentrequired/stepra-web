@@ -210,7 +210,7 @@ const JAMBPastQuestionsSelection = () => {
 
       const totalQ = Object.values(subjectsQuestions).flat().length;
 
-      navigate('/exam/screen', {
+      navigate(`/exam/screen/${attempt.uuid}`, {
         state: {
           attemptUuid: attempt.uuid,
           examUuid: attempt.exam_uuid || undefined,

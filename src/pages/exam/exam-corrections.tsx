@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { Button } from "@/components/ui";
 import { getExamResults } from "@/apis/exam";
-import { getApiErrorMessage } from "@/utils";
+import { getApiErrorMessage, getQuestionImageUrl } from "@/utils";
 import {
   ChevronLeft,
   ChevronRight,
@@ -320,19 +320,7 @@ const ExamCorrections = () => {
   const correctAnswerUuid = currentResult.correct_answer?.uuid;
   const userAnswerUuid = currentResult.user_answer?.uuid;
 
-  // Get base URL for images
-  const baseUrl = import.meta.env.VITE_BASE_URL || "http://localhost:8000";
-  const imageUrl = currentQuestion?.image
-    ? currentQuestion.image.startsWith("http")
-      ? currentQuestion.image
-      : `${baseUrl}/storage/${currentQuestion.image}`
-    : currentQuestion?.image_url
-      ? currentQuestion.image_url.startsWith("http")
-        ? currentQuestion.image_url
-        : `${baseUrl}${currentQuestion.image_url}`
-      : currentQuestion?.image_path
-        ? `${baseUrl}/storage/${currentQuestion.image_path}`
-        : null;
+  const imageUrl = getQuestionImageUrl(currentQuestion);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background">

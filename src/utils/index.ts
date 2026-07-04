@@ -4,6 +4,7 @@ import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 export { default as formatAmount } from './format-amount';
+export { getQuestionImageUrl, getStorageBaseUrl } from './question-image';
 
 export const injectErrorBoundary = (routes: RouteObject[], errorElement: ReactNode) => {
   return routes.map((route) => {

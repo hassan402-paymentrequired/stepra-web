@@ -86,7 +86,7 @@ const AppLayout: React.FC<PropsWithChildren> = ({ children }) => {
       return items;
     }
 
-    if (pathname.startsWith("/exam/") && !["/exam/screen", "/exam/results", "/exam/corrections"].includes(pathname)) {
+    if (pathname.startsWith("/exam/") && !pathname.startsWith("/exam/screen") && pathname !== "/exam/results" && pathname !== "/exam/corrections") {
       const examRouteMatch = pathname.match(/^\/exam\/([^/]+)\/(.+)$/);
       if (examRouteMatch) {
         const examSlug = examRouteMatch[1].toUpperCase();

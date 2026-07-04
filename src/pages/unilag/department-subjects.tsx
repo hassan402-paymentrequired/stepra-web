@@ -146,7 +146,7 @@ const UnilagDepartmentSubjects = () => {
         return;
       }
 
-      navigate("/exam/screen", {
+      navigate(`/exam/screen/${attempt.uuid}`, {
         state: {
           attemptUuid: attempt.uuid,
           examUuid: attempt.exam_uuid || undefined,

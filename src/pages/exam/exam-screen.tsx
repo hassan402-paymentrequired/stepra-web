@@ -1,21 +1,24 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useNavigate, useLocation } from "react-router";
+import { useNavigate, useLocation, useParams } from "react-router";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui";
-import { submitAnswersBulk, completeExamAttempt } from "@/apis/exam";
+import { submitAnswersBulk, completeExamAttempt, resumeExamAttempt } from "@/apis/exam";
 import { recordStreak } from "@/apis/streak";
 import { buildAnswersPayload } from "@/lib/exam-answer-utils";
 import {
   saveExamSession,
-  loadExamSession,
   clearExamSession,
   saveExamProgress,
   loadExamProgress,
   clearExamProgress,
   getRemainingSeconds,
+  resolveExamSession,
+  buildSessionFromResume,
   type ExamScreenSession,
+  type ExamScreenLocationState,
+  type ExamProgress,
 } from "@/lib/exam-session-storage";
-import { getApiErrorMessage } from "@/utils";
+import { getApiErrorMessage, getQuestionImageUrl } from "@/utils";
 import type { AxiosError } from "axios";
 import type { Question } from "@/apis/exam";
 import { toast } from "sonner";
@@ -30,43 +33,172 @@ import { CalculatorModal } from "./components/CalculatorModal";
 import { SubjectSelectorModal } from "./components/SubjectSelectorModal";
 import { ExamNavigation } from "./components/ExamNavigation";
 
-interface ExamScreenLocationState {
-  attemptUuid: string;
-  examUuid?: string;
-  subjectsQuestions: Record<string, Question[]>;
-  exam: {
-    uuid?: string;
-    title: string;
-    duration: number;
-    total_questions: number;
-  };
-  timeMinutes: number;
-  subjects: string[];
-  isPractice?: boolean;
-}
-
-const resolveExamSession = (
-  locationState: ExamScreenLocationState | null
-): ExamScreenSession | null => {
-  if (locationState?.attemptUuid && locationState.subjectsQuestions) {
-    const session: ExamScreenSession = {
-      ...locationState,
-      startedAt: Date.now(),
-    };
-    saveExamSession(session);
-    return session;
-  }
-  return loadExamSession();
-};
-
 const ExamScreen = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { attemptUuid: attemptUuidParam } = useParams<{ attemptUuid?: string }>();
   const locationState = location.state as ExamScreenLocationState | null;
-  const examSession = resolveExamSession(locationState);
-  const savedProgress = examSession?.attemptUuid
-    ? loadExamProgress(examSession.attemptUuid)
-    : null;
+
+  const [examSession, setExamSession] = useState<ExamScreenSession | null>(null);
+  const [savedProgress, setSavedProgress] = useState<ExamProgress | null>(null);
+  const [isHydrating, setIsHydrating] = useState(true);
+  const [hydrateError, setHydrateError] = useState<string | null>(null);
+
+  const locationStateRef = useRef(locationState);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const hydrate = async () => {
+      setIsHydrating(true);
+      setHydrateError(null);
+
+      let session = resolveExamSession(locationStateRef.current);
+      let progress = session ? loadExamProgress(session.attemptUuid) : null;
+
+      const attemptUuid =
+        attemptUuidParam || session?.attemptUuid || locationStateRef.current?.attemptUuid;
+
+      const shouldResumeFromApi = (uuid: string) =>
+        !session ||
+        (attemptUuidParam && session.attemptUuid !== attemptUuidParam);
+
+      if (attemptUuid && shouldResumeFromApi(attemptUuid)) {
+        try {
+          const response = await resumeExamAttempt(attemptUuid);
+          if (response.success && response.data) {
+            session = buildSessionFromResume(response.data);
+            saveExamSession(session);
+
+            const apiProgress = response.data.progress as Partial<ExamProgress> | undefined;
+            progress = {
+              selectedAnswers: apiProgress?.selectedAnswers ?? progress?.selectedAnswers ?? {},
+              textInputAnswers: apiProgress?.textInputAnswers ?? progress?.textInputAnswers ?? {},
+              subjectCurrentIndex: progress?.subjectCurrentIndex ?? {},
+              currentSubject:
+                progress?.currentSubject ??
+                response.data.subjects?.[0] ??
+                Object.keys(response.data.questions ?? {})[0] ??
+                "",
+              questionStartTime: apiProgress?.questionStartTime ?? progress?.questionStartTime ?? {},
+            };
+
+            if (!progress.subjectCurrentIndex || Object.keys(progress.subjectCurrentIndex).length === 0) {
+              progress.subjectCurrentIndex = Object.keys(session.subjectsQuestions).reduce(
+                (acc, subject) => {
+                  acc[subject] = 0;
+                  return acc;
+                },
+                {} as Record<string, number>
+              );
+            }
+          }
+        } catch {
+          // Fall through — may still have partial sessionStorage data.
+        }
+      } else if (
+        session &&
+        attemptUuid &&
+        (!progress ||
+          (Object.keys(progress.selectedAnswers).length === 0 &&
+            Object.keys(progress.textInputAnswers).length === 0))
+      ) {
+        try {
+          const response = await resumeExamAttempt(attemptUuid);
+          if (response.success && response.data?.progress) {
+            const apiProgress = response.data.progress as Partial<ExamProgress>;
+            progress = {
+              selectedAnswers: {
+                ...apiProgress.selectedAnswers,
+                ...progress?.selectedAnswers,
+              },
+              textInputAnswers: {
+                ...apiProgress.textInputAnswers,
+                ...progress?.textInputAnswers,
+              },
+              subjectCurrentIndex: progress?.subjectCurrentIndex ?? {},
+              currentSubject: progress?.currentSubject ?? response.data.subjects?.[0] ?? "",
+              questionStartTime: {
+                ...apiProgress.questionStartTime,
+                ...progress?.questionStartTime,
+              },
+            };
+
+            if (!progress.subjectCurrentIndex || Object.keys(progress.subjectCurrentIndex).length === 0) {
+              progress.subjectCurrentIndex = Object.keys(session.subjectsQuestions).reduce(
+                (acc, subject) => {
+                  acc[subject] = 0;
+                  return acc;
+                },
+                {} as Record<string, number>
+              );
+            }
+          }
+        } catch {
+          // Local session remains usable without server progress.
+        }
+      }
+
+      if (cancelled) return;
+
+      if (!session || Object.keys(session.subjectsQuestions).length === 0) {
+        setHydrateError("Could not restore your exam session.");
+        setExamSession(null);
+        setSavedProgress(null);
+      } else {
+        setExamSession(session);
+        setSavedProgress(progress);
+        if (progress) {
+          saveExamProgress(session.attemptUuid, progress);
+        }
+        if (!attemptUuidParam || attemptUuidParam !== session.attemptUuid) {
+          navigate(`/exam/screen/${session.attemptUuid}`, { replace: true });
+        }
+      }
+
+      setIsHydrating(false);
+    };
+
+    hydrate();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [attemptUuidParam, navigate]);
+
+  if (isHydrating) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" />
+      </div>
+    );
+  }
+
+  if (hydrateError || !examSession) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <p className="text-destructive mb-4">
+            {hydrateError ?? "Invalid exam data. Please try again."}
+          </p>
+          <Button onClick={() => navigate("/dashboard")}>Go Back</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ExamScreenActive examSession={examSession} initialProgress={savedProgress} />
+  );
+};
+
+interface ExamScreenActiveProps {
+  examSession: ExamScreenSession;
+  initialProgress: ExamProgress | null;
+}
+
+const ExamScreenActive = ({ examSession, initialProgress: savedProgress }: ExamScreenActiveProps) => {
+  const navigate = useNavigate();
   const { data: user } = useUser();
 
   // Screenshot prevention hook
@@ -420,17 +552,40 @@ const ExamScreen = () => {
     () => savedProgress?.questionStartTime ?? {}
   );
 
+  const apiSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
-    if (!examSession?.attemptUuid) return;
-    saveExamProgress(examSession.attemptUuid, {
+    if (!examSession.attemptUuid) return;
+
+    const progress: ExamProgress = {
       selectedAnswers,
       textInputAnswers,
       subjectCurrentIndex,
       currentSubject,
       questionStartTime,
-    });
+    };
+
+    saveExamProgress(examSession.attemptUuid, progress);
+
+    if (apiSaveTimeoutRef.current) {
+      clearTimeout(apiSaveTimeoutRef.current);
+    }
+
+    apiSaveTimeoutRef.current = setTimeout(() => {
+      const answers = buildAnswersPayload(selectedAnswers, textInputAnswers, questionStartTime);
+      if (answers.length === 0) return;
+      submitAnswersBulk(examSession.attemptUuid, { answers }).catch(() => {
+        // Local progress remains saved; will retry on next change.
+      });
+    }, 2000);
+
+    return () => {
+      if (apiSaveTimeoutRef.current) {
+        clearTimeout(apiSaveTimeoutRef.current);
+      }
+    };
   }, [
-    examSession?.attemptUuid,
+    examSession.attemptUuid,
     selectedAnswers,
     textInputAnswers,
     subjectCurrentIndex,
@@ -684,15 +839,18 @@ const ExamScreen = () => {
     };
   }, [examSession, handleAutoSubmit]);
 
-  // Track time spent on each question
+  // Track time spent on each question (preserve restored times on reload)
   useEffect(() => {
-    if (currentQuestion) {
-      const startTime = Date.now();
-      setQuestionStartTime((prev) => ({
+    if (!currentQuestion) return;
+    setQuestionStartTime((prev) => {
+      if (prev[currentQuestion.uuid]) {
+        return prev;
+      }
+      return {
         ...prev,
-        [currentQuestion.uuid]: startTime,
-      }));
-    }
+        [currentQuestion.uuid]: Date.now(),
+      };
+    });
   }, [currentQuestion?.uuid]);
 
   // Timer effect
@@ -861,11 +1019,7 @@ const ExamScreen = () => {
     }
   };
 
-  if (
-    !examSession ||
-    !subjectsQuestions ||
-    Object.keys(subjectsQuestions).length === 0
-  ) {
+  if (!subjectsQuestions || Object.keys(subjectsQuestions).length === 0) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
@@ -891,19 +1045,7 @@ const ExamScreen = () => {
   const isLastQuestionInSubject =
     currentQuestionIndex === totalQuestionsForSubject - 1;
 
-  // Get base URL for images
-  const baseUrl = import.meta.env.VITE_ABSOLUTE_URL;
-  const imageUrl = currentQuestion.image
-    ? currentQuestion.image.startsWith("http")
-      ? currentQuestion.image
-      : `${baseUrl}/storage/${currentQuestion.image}`
-    : currentQuestion.image_url
-      ? currentQuestion.image_url.startsWith("http")
-        ? currentQuestion.image_url
-        : `${baseUrl}${currentQuestion.image_url}`
-      : currentQuestion.image_path
-        ? `${baseUrl}/storage/${currentQuestion.image_path}`
-        : null;
+  const imageUrl = getQuestionImageUrl(currentQuestion);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background exam-content">
