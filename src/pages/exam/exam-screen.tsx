@@ -59,11 +59,11 @@ const ExamScreen = () => {
       const attemptUuid =
         attemptUuidParam || session?.attemptUuid || locationStateRef.current?.attemptUuid;
 
-      const shouldResumeFromApi = (uuid: string) =>
+      const shouldResumeFromApi =
         !session ||
-        (attemptUuidParam && session.attemptUuid !== attemptUuidParam);
+        (attemptUuidParam && session?.attemptUuid !== attemptUuidParam);
 
-      if (attemptUuid && shouldResumeFromApi(attemptUuid)) {
+      if (attemptUuid && shouldResumeFromApi) {
         try {
           const response = await resumeExamAttempt(attemptUuid);
           if (response.success && response.data) {
