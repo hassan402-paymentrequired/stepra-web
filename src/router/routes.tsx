@@ -25,11 +25,15 @@ import {
   Leaderboard,
 } from '@/pages';
 import { ErrorBoundaryFallback } from '../components/error-boundary-fallback';
+import { AppShell } from '@/components/app-shell';
 import { injectErrorBoundary } from '@/utils';
 import GuestRoute from './guest-route';
 import ProtectedRoute from './protected-route';
 
 const routesObject: RouteObject[] = [
+  {
+    element: <AppShell />,
+    children: [
   {
     path: '/',
     element: <Landing />,
@@ -149,6 +153,8 @@ const routesObject: RouteObject[] = [
   {
     path: '*',
     element: <div>404 - Page Not Found</div>,
+  },
+    ],
   },
 ];
 

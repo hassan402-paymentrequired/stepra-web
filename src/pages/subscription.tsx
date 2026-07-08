@@ -33,6 +33,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AxiosError } from "axios";
 import { toast } from "sonner";
 
+/** Display price before discount (2× current, rounded to nearest ₦500). */
+function getCompareAtPrice(price: number): number {
+  return Math.ceil((price * 2) / 500) * 400;
+}
+
 const Subscription = () => {
   const { refetch: refetchUser } = useUser();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -266,6 +271,7 @@ const Subscription = () => {
   const hasActiveSubscription = status?.has_active_subscription || false;
   const subscriptionOnOtherDevice = !hasActiveSubscription && status?.other_devices_active;
   const needsDeviceBinding = !hasActiveSubscription && status?.needs_device_binding;
+  const compareAtPrice = plan ? getCompareAtPrice(plan.price) : null;
 
   return (
     <AppLayout>
@@ -315,7 +321,12 @@ const Subscription = () => {
             <div className="bg-card border rounded-lg p-8 mb-6">
               <div className="mb-6">
                 <h2 className="text-3xl font-bold mb-2">{plan.name}</h2>
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  {compareAtPrice != null && compareAtPrice > plan.price && (
+                    <span className="text-2xl text-muted-foreground line-through">
+                      ₦{compareAtPrice.toLocaleString()}
+                    </span>
+                  )}
                   <span className="text-4xl font-bold text-primary">
                     ₦{plan.price.toLocaleString()}
                   </span>
@@ -389,7 +400,15 @@ const Subscription = () => {
                       ) : (
                         <>
                           <CreditCard className="h-4 w-4 mr-2" />
-                          Subscribe for ₦{plan.price.toLocaleString()}/year
+                          <span className="inline-flex items-center gap-1.5">
+                            Subscribe for
+                            {compareAtPrice != null && compareAtPrice > plan.price && (
+                              <span className="line-through opacity-70 font-normal">
+                                ₦{compareAtPrice.toLocaleString()}
+                              </span>
+                            )}
+                            <span>₦{plan.price.toLocaleString()}</span>
+                          </span>
                         </>
                       )}
                     </Button>

@@ -7,7 +7,7 @@ import { getSubjects, getAvailableYears, startPracticeSession } from '@/apis/exa
 import { useExamSelection } from '@/contexts/ExamSelectionContext';
 import { useExamRouteSlug } from '@/hooks/useExamRouteSlug';
 import { useSubscriptionGate } from '@/hooks/useSubscriptionGate';
-import { Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';
 import { EmptyStateCard } from '@/components/empty-state/EmptyStateCard';
 import { getApiErrorMessage } from '@/utils';
 import type { AxiosError } from 'axios';
@@ -38,7 +38,7 @@ const JAMBPastQuestionsSelection = () => {
   const [currentSubjectForQuestionCount, setCurrentSubjectForQuestionCount] = useState<string | null>(null);
   const [startingExam, setStartingExam] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const { hasActiveSubscription, maxQuestionsPerSubject } = useSubscriptionGate();
+  const { hasActiveSubscription, maxQuestionsPerSubject, loading: subscriptionLoading } = useSubscriptionGate();
   const questionCountOptions = Array.from({ length: maxQuestionsPerSubject }, (_, i) => i + 1);
 
   useEffect(() => {
@@ -239,12 +239,29 @@ const JAMBPastQuestionsSelection = () => {
     return sum + (selection?.questionCount || 0);
   }, 0);
 
-  if (loading) {
+  if (loading || subscriptionLoading) {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center h-full gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-muted-foreground">Loading {examTypeLabel} past question subjects...</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!hasActiveSubscription) {
+    return (
+      <AppLayout>
+        <div className="max-w-md mx-auto">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-6 text-center">
+            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-amber-600 dark:text-amber-400" />
+            <h2 className="text-xl font-bold mb-2">Subscription Required</h2>
+            <p className="text-muted-foreground mb-6">
+              You need an active subscription to access past questions. Subscribe to unlock unlimited practice.
+            </p>
+            <Button onClick={() => navigate('/subscription')}>Subscribe Now</Button>
+          </div>
         </div>
       </AppLayout>
     );
@@ -288,11 +305,6 @@ const JAMBPastQuestionsSelection = () => {
             <p className="text-muted-foreground">
               Choose up to 4 subjects and set question count and year for each ({selectedSubjects.length}/4 selected)
             </p>
-            {!hasActiveSubscription && (
-              <p className="text-sm text-primary mt-2 font-semibold">
-                ⚠️ Non-subscribed users are limited to 5 questions per subject. Subscribe to unlock up to 100 questions per subject.
-              </p>
-            )}
           </div>
 
           <div className="space-y-4 mb-6">

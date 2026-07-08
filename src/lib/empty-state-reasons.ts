@@ -53,7 +53,7 @@ export function getEmptyStateContent(
       return {
         title: `No ${modeLabel} subjects for ${exam}`,
         description: `There are no subjects linked to ${exam} for ${modeLabel} yet. New content is added from time to time.`,
-        hint: 'This is not a subscription issue — free and subscribed users see the same subject list. Subscriptions only limit how many questions you can take per session.',
+        hint: 'An active subscription is required to practice questions. Subscribe to get started once subjects are available.',
       };
 
     case 'no-departments':

@@ -112,8 +112,8 @@ const Referral = () => {
       return;
     }
 
-    if (!withdrawalForm.amount || withdrawalForm.amount < 100) {
-      toast.error("Minimum withdrawal amount is ₦100");
+    if (!withdrawalForm.amount || withdrawalForm.amount < (referralData.min_withdrawal_amount || 1000)) {
+      toast.error(`Minimum withdrawal amount is ₦${(referralData.min_withdrawal_amount || 1000).toLocaleString()}`);
       return;
     }
 
@@ -202,7 +202,7 @@ const Referral = () => {
                   </p>
                 </div>
               </div>
-              {referralData.credit_balance >= 100 && (
+              {referralData.credit_balance >= (referralData.min_withdrawal_amount || 1000) && (
                 <Button
                   onClick={() => setShowWithdrawalForm(true)}
                   variant="outline"
@@ -211,13 +211,12 @@ const Referral = () => {
                 </Button>
               )}
             </div>
-            {referralData.credit_balance < 100 && (
+            {referralData.credit_balance < (referralData.min_withdrawal_amount || 1000) && (
               <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
                   <p className="text-sm text-yellow-800">
-                    Minimum withdrawal amount is ₦100. Refer more friends to
-                    increase your balance!
+                    Minimum withdrawal amount is ₦{(referralData.min_withdrawal_amount || 1000).toLocaleString()}. Refer more friends to increase your balance!
                   </p>
                 </div>
               </div>
@@ -329,12 +328,39 @@ const Referral = () => {
                 <div>
                   <p className="font-medium">Withdraw your credits</p>
                   <p className="text-sm text-muted-foreground">
-                    Withdraw your credits to your phone number (minimum ₦100)
+                    Withdraw your credits to your phone number (minimum ₦{(referralData.min_withdrawal_amount || 1000).toLocaleString()})
                   </p>
                 </div>
               </div>
             </div>
           </div>
+
+          {referralData.recent_withdrawals?.length > 0 && (
+            <div className="bg-card border rounded-lg p-6 mb-6">
+              <h3 className="text-lg font-semibold mb-4">Recent Withdrawals</h3>
+              <div className="space-y-3">
+                {referralData.recent_withdrawals.map((withdrawal) => (
+                  <div key={withdrawal.uuid} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <p className="font-semibold">₦{withdrawal.amount.toLocaleString()}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {withdrawal.phone_number} · {withdrawal.network.toUpperCase()}
+                      </p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
+                      withdrawal.status === 'paid'
+                        ? 'bg-green-100 text-green-700'
+                        : withdrawal.status === 'rejected'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {withdrawal.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Recent Referrals */}
           {referralData.recent_referrals.length > 0 && (
@@ -449,8 +475,8 @@ const Referral = () => {
               <Input
                 label="Amount (₦)"
                 type="number"
-                placeholder="100"
-                min={100}
+                placeholder={`${referralData.min_withdrawal_amount || 1000}`}
+                min={referralData.min_withdrawal_amount || 1000}
                 max={referralData.credit_balance}
                 value={withdrawalForm.amount || ""}
                 onChange={(e) =>

@@ -23,9 +23,24 @@ export interface RecentReferral {
 export interface ReferralData {
   referral_code: string;
   referral_url: string;
-  credit_balance: number; // Credit balance in NGN
+  credit_balance: number;
+  total_earnings: number;
+  min_withdrawal_amount: number;
+  reward_amount: number;
   statistics: ReferralStatistics;
   recent_referrals: RecentReferral[];
+  recent_withdrawals: ReferralWithdrawal[];
+}
+
+export interface ReferralWithdrawal {
+  uuid: string;
+  amount: number;
+  phone_number: string;
+  network: string;
+  status: 'pending' | 'paid' | 'rejected';
+  admin_notes: string | null;
+  processed_at: string | null;
+  created_at: string;
 }
 
 export interface WithdrawalRequest {

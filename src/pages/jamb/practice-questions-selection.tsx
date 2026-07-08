@@ -31,7 +31,7 @@ const JAMBPracticeQuestionsSelection = () => {
   const [showQuestionCountModal, setShowQuestionCountModal] = useState(false);
   const [currentSubjectForQuestionCount, setCurrentSubjectForQuestionCount] = useState<string | null>(null);
   const [startingExam, setStartingExam] = useState(false);
-  const { hasActiveSubscription, maxQuestionsPerSubject } = useSubscriptionGate();
+  const { hasActiveSubscription, maxQuestionsPerSubject, loading: subscriptionLoading } = useSubscriptionGate();
 
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -99,13 +99,13 @@ const JAMBPracticeQuestionsSelection = () => {
       setExpandedSubjects(prev => new Set(prev).add(subject));
 
       // Auto-set default question count for better UX
-      const defaultCount = hasActiveSubscription ? 10 : 5;
+      const defaultCount = 10;
       setQuestionCounts(prev => ({
         ...prev,
         [subject]: defaultCount
       }));
     }
-  }, [selectedSubjects, hasActiveSubscription]);
+  }, [selectedSubjects]);
 
   const toggleAccordion = useCallback((subject: string) => {
     if (!selectedSubjects.includes(subject)) return;
@@ -220,12 +220,29 @@ const JAMBPracticeQuestionsSelection = () => {
   ]);
 
   // Loading state
-  if (loading) {
+  if (loading || subscriptionLoading) {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center h-full">
           <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
           <p className="text-muted-foreground">Loading {examTypeLabel} practice subjects...</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!hasActiveSubscription) {
+    return (
+      <AppLayout>
+        <div className="max-w-md mx-auto">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-6 text-center">
+            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-amber-600 dark:text-amber-400" />
+            <h2 className="text-xl font-bold mb-2">Subscription Required</h2>
+            <p className="text-muted-foreground mb-6">
+              You need an active subscription to access practice questions. Subscribe to unlock unlimited practice.
+            </p>
+            <Button onClick={() => navigate('/subscription')}>Subscribe Now</Button>
+          </div>
         </div>
       </AppLayout>
     );
@@ -269,20 +286,6 @@ const JAMBPracticeQuestionsSelection = () => {
             <p className="text-muted-foreground">
               Choose up to 4 subjects and set question count for each ({selectedSubjects.length}/4 selected)
             </p>
-
-            {!hasActiveSubscription && (
-              <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <div>
-                    <p className="text-sm font-medium text-amber-950 dark:text-amber-100">Limited Practice Mode</p>
-                    <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-100/80">
-                      Free users can practice up to 5 questions per subject. Subscribe to unlock up to 100 questions per subject.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="space-y-4 mb-6">
@@ -368,7 +371,6 @@ const JAMBPracticeQuestionsSelection = () => {
                           </button>
                           <p className="text-xs text-muted-foreground mt-1">
                             Range: 1-{maxQuestionsPerSubject} questions
-                            {!hasActiveSubscription && ' (Free limit: 5)'}
                           </p>
                         </div>
                       </div>
@@ -446,9 +448,7 @@ const JAMBPracticeQuestionsSelection = () => {
         onSelect={selectQuestionCount}
         footer={
           <p className="text-xs text-muted-foreground">
-            {hasActiveSubscription
-              ? 'Premium: Up to 100 questions per subject'
-              : 'Free: Up to 5 questions per subject'}
+            Up to 100 questions per subject
           </p>
         }
       />

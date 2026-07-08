@@ -5,13 +5,10 @@ import { getSubscriptionStatus, registerSubscriptionDevice } from '@/apis/subscr
 interface UseSubscriptionGateOptions {
   /** Max questions per subject when subscribed (default: 100 for JAMB-style) */
   premiumLimit?: number;
-  /** Max questions per subject for free users (default: 5) */
-  freeLimit?: number;
 }
 
 export function useSubscriptionGate({
   premiumLimit = 100,
-  freeLimit = 5,
 }: UseSubscriptionGateOptions = {}) {
   const { data: user } = useUser();
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
@@ -52,11 +49,10 @@ export function useSubscriptionGate({
     checkSubscription();
   }, [user]);
 
-  const maxQuestionsPerSubject = hasActiveSubscription ? premiumLimit : freeLimit;
-
   return {
     hasActiveSubscription,
     loading,
-    maxQuestionsPerSubject,
+    canAccessQuestions: hasActiveSubscription,
+    maxQuestionsPerSubject: premiumLimit,
   };
 }

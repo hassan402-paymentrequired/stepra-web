@@ -41,7 +41,7 @@ const UnilagDepartmentSubjects = () => {
   const [showTestModal, setShowTestModal] = useState(false);
   const [showQuestionCountModal, setShowQuestionCountModal] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
-  const { hasActiveSubscription, maxQuestionsPerSubject } = useSubscriptionGate({ premiumLimit: 50 });
+  const { hasActiveSubscription, maxQuestionsPerSubject, loading: subscriptionLoading } = useSubscriptionGate({ premiumLimit: 50 });
   const examLabel = selection.examTypeName || "UNILAG";
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -172,13 +172,30 @@ const UnilagDepartmentSubjects = () => {
     }
   };
 
-  if (loading) {
+  if (loading || subscriptionLoading) {
     return (
       <AppLayout>
         <div className="w-full flex items-center justify-center min-h-[400px]">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-muted-foreground">Loading subjects...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!hasActiveSubscription) {
+    return (
+      <AppLayout>
+        <div className="max-w-md mx-auto">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-6 text-center">
+            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-amber-600 dark:text-amber-400" />
+            <h2 className="text-xl font-bold mb-2">Subscription Required</h2>
+            <p className="text-muted-foreground mb-6">
+              You need an active subscription to access practice questions. Subscribe to unlock up to 50 questions per session.
+            </p>
+            <Button onClick={() => navigate('/subscription')}>Subscribe Now</Button>
           </div>
         </div>
       </AppLayout>
@@ -232,17 +249,6 @@ const UnilagDepartmentSubjects = () => {
               Select your course, number of questions, and time. Practice with
               random questions.
             </p>
-            {!hasActiveSubscription && (
-              <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-400" />
-                  <p className="text-sm text-amber-950 dark:text-amber-100">
-                    Non-subscribed users are limited to 5 questions per practice
-                    session. Subscribe to unlock up to 50 questions per session.
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Course Selection */}
@@ -384,9 +390,7 @@ const UnilagDepartmentSubjects = () => {
             }}
             footer={
               <p className="text-xs text-muted-foreground">
-                {hasActiveSubscription
-                  ? "Premium: Up to 50 questions per session"
-                  : "Free: Up to 5 questions per session"}
+                Up to 50 questions per session
               </p>
             }
           />
