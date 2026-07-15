@@ -15,38 +15,61 @@ export function useSubscriptionGate({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const checkSubscription = async () => {
       if (!user) {
         setLoading(false);
         return;
       }
 
-      try {
-        const response = await getSubscriptionStatus();
-        if (response.success && response.data) {
-          if (response.data.needs_device_binding) {
-            try {
-              await registerSubscriptionDevice();
-              const refreshed = await getSubscriptionStatus();
-              if (refreshed.success && refreshed.data) {
-                setHasActiveSubscription(refreshed.data.has_active_subscription || false);
-                return;
-              }
-            } catch {
-              // Another device may have claimed the subscription first.
-            }
-          }
+      setLoading(true);
 
-          setHasActiveSubscription(response.data.has_active_subscription || false);
+      try {
+        let response = await getSubscriptionStatus();
+
+        if (response.success && response.data?.needs_device_binding) {
+          try {
+            await registerSubscriptionDevice();
+            response = await getSubscriptionStatus();
+          } catch {
+            // Another device may have claimed the subscription first.
+          }
+        }
+
+        if (!cancelled && response.success && response.data) {
+          setHasActiveSubscription(
+            response.data.has_active_subscription || false
+          );
         }
       } catch {
-        setHasActiveSubscription(false);
+        if (!cancelled) {
+          // Retry once — transient network errors should not look like "unsubscribed"
+          try {
+            const retry = await getSubscriptionStatus();
+            if (!cancelled && retry.success && retry.data) {
+              setHasActiveSubscription(
+                retry.data.has_active_subscription || false
+              );
+              return;
+            }
+          } catch {
+            // keep previous / false
+          }
+          setHasActiveSubscription(false);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     checkSubscription();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   return {

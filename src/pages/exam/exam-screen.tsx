@@ -2,7 +2,12 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui";
-import { submitAnswersBulk, completeExamAttempt, resumeExamAttempt } from "@/apis/exam";
+import {
+  submitAnswersBulk,
+  completeExamAttempt,
+  resumeExamAttempt,
+  getExamAttempt,
+} from "@/apis/exam";
 import { recordStreak } from "@/apis/streak";
 import { buildAnswersPayload } from "@/lib/exam-answer-utils";
 import {
@@ -58,6 +63,29 @@ const ExamScreen = () => {
 
       const attemptUuid =
         attemptUuidParam || session?.attemptUuid || locationStateRef.current?.attemptUuid;
+
+      // Completed attempts must not reopen as a live exam (e.g. browser back).
+      if (attemptUuid) {
+        try {
+          const attemptResponse = await getExamAttempt(attemptUuid);
+          const status = attemptResponse?.data?.status;
+          if (status && status !== "in_progress") {
+            clearExamSession();
+            clearExamProgress(attemptUuid);
+            setIsHydrating(false);
+            navigate("/exam/results", {
+              replace: true,
+              state: {
+                attemptUuid,
+                isPracticeSession: locationStateRef.current?.isPractice === true,
+              },
+            });
+            return;
+          }
+        } catch {
+          // Continue with local session if status check fails.
+        }
+      }
 
       const shouldResumeFromApi =
         !session ||
@@ -682,6 +710,7 @@ const ExamScreenActive = ({ examSession, initialProgress: savedProgress }: ExamS
       clearExamSession();
       clearExamProgress(examSession.attemptUuid);
       navigate("/exam/results", {
+        replace: true,
         state: {
           attemptUuid: examSession.attemptUuid,
           isPracticeSession: examSession?.isPractice === true,
@@ -690,6 +719,24 @@ const ExamScreenActive = ({ examSession, initialProgress: savedProgress }: ExamS
     } catch (error) {
       const errorMessage = getApiErrorMessage(error as AxiosError);
       console.error('Error completing exam:', errorMessage);
+
+      if (
+        typeof errorMessage === "string" &&
+        errorMessage.toLowerCase().includes("not in progress") &&
+        examSession?.attemptUuid
+      ) {
+        clearExamSession();
+        clearExamProgress(examSession.attemptUuid);
+        navigate("/exam/results", {
+          replace: true,
+          state: {
+            attemptUuid: examSession.attemptUuid,
+            isPracticeSession: examSession?.isPractice === true,
+          },
+        });
+        return;
+      }
+
       toast.error(errorMessage);
       autoSubmitRef.current = false;
     } finally {
@@ -748,6 +795,7 @@ const ExamScreenActive = ({ examSession, initialProgress: savedProgress }: ExamS
 
       toast.success(`Practice session ${reason === 'user_exit' ? 'auto-submitted' : 'completed'} successfully!`);
       navigate('/exam/results', {
+        replace: true,
         state: {
           attemptUuid: examSession.attemptUuid,
           autoSubmitted: reason === 'user_exit',
