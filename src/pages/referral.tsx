@@ -5,6 +5,7 @@ import { Button, Input } from "@/components/ui";
 import {
   getReferralData,
   requestWithdrawal,
+  formatWithdrawalDestination,
   type ReferralData,
   type WithdrawalRequest,
 } from "@/apis/referral";
@@ -17,20 +18,20 @@ import {
   TrendingUp,
   Clock,
   Wallet,
-  Phone,
   Loader2,
   CheckCircle2,
   AlertCircle,
+  Building2,
 } from "lucide-react";
 import type { AxiosError } from "axios";
 import { toast } from "sonner";
 
-const NETWORKS = [
-  { value: "mtn", label: "MTN" },
-  { value: "airtel", label: "Airtel" },
-  { value: "glo", label: "Glo" },
-  { value: "9mobile", label: "9mobile" },
-] as const;
+const emptyWithdrawalForm = (): WithdrawalRequest => ({
+  account_name: "",
+  account_number: "",
+  bank_name: "",
+  amount: 0,
+});
 
 const Referral = () => {
   const navigate = useNavigate();
@@ -38,11 +39,9 @@ const Referral = () => {
   const [referralData, setReferralData] = useState<ReferralData | null>(null);
   const [withdrawing, setWithdrawing] = useState(false);
   const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
-  const [withdrawalForm, setWithdrawalForm] = useState<WithdrawalRequest>({
-    phone_number: "",
-    network: "mtn",
-    amount: 0,
-  });
+  const [withdrawalForm, setWithdrawalForm] = useState<WithdrawalRequest>(
+    emptyWithdrawalForm()
+  );
   const [copied, setCopied] = useState(false);
   const [withdrawalSuccess, setWithdrawalSuccess] = useState(false);
 
@@ -72,7 +71,7 @@ const Referral = () => {
       await navigator.clipboard.writeText(referralData.referral_code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
+    } catch {
       toast.error("Failed to copy referral code");
     }
   };
@@ -80,8 +79,8 @@ const Referral = () => {
   const handleShare = async () => {
     if (!referralData) return;
 
+    const shareUrl = `${window.location.origin}/authenticate/register?ref=${referralData.referral_code}`;
     const shareText = `Join Stepra and earn rewards! Use my referral code: ${referralData.referral_code}`;
-    const shareUrl = referralData.referral_url;
 
     if (navigator.share) {
       try {
@@ -90,13 +89,13 @@ const Referral = () => {
           text: shareText,
           url: shareUrl,
         });
-        trackEvent('referral_share', { method: 'web_share' });
-      } catch (error) {
+        trackEvent("referral_share", { method: "web_share" });
+      } catch {
         // User cancelled or error occurred
       }
     } else {
       await navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`);
-      trackEvent('referral_share', { method: 'clipboard' });
+      trackEvent("referral_share", { method: "clipboard" });
       toast.success("Referral link copied to clipboard!");
     }
   };
@@ -104,37 +103,51 @@ const Referral = () => {
   const handleWithdrawal = async () => {
     if (!referralData) return;
 
-    if (
-      !withdrawalForm.phone_number ||
-      withdrawalForm.phone_number.length < 10
-    ) {
-      toast.error("Please enter a valid phone number");
+    const accountName = withdrawalForm.account_name.trim();
+    const bankName = withdrawalForm.bank_name.trim();
+    const accountNumber = withdrawalForm.account_number.trim();
+    const minAmount = referralData.min_withdrawal_amount || 1000;
+
+    if (!accountName || accountName.length < 2) {
+      toast.error("Please enter the account name");
       return;
     }
 
-    if (!withdrawalForm.amount || withdrawalForm.amount < (referralData.min_withdrawal_amount || 1000)) {
-      toast.error(`Minimum withdrawal amount is ₦${(referralData.min_withdrawal_amount || 1000).toLocaleString()}`);
+    if (!/^\d{10}$/.test(accountNumber)) {
+      toast.error("Account number must be exactly 10 digits");
+      return;
+    }
+
+    if (!bankName || bankName.length < 2) {
+      toast.error("Please enter your bank name");
+      return;
+    }
+
+    if (!withdrawalForm.amount || withdrawalForm.amount < minAmount) {
+      toast.error(
+        `Minimum withdrawal amount is ₦${minAmount.toLocaleString()}`
+      );
       return;
     }
 
     if (withdrawalForm.amount > referralData.credit_balance) {
-      toast.error("Insufficient credit balance");
+      toast.error("Insufficient balance");
       return;
     }
 
     try {
       setWithdrawing(true);
-      const response = await requestWithdrawal(withdrawalForm);
+      const response = await requestWithdrawal({
+        account_name: accountName,
+        account_number: accountNumber,
+        bank_name: bankName,
+        amount: withdrawalForm.amount,
+      });
 
       if (response.success) {
         setWithdrawalSuccess(true);
         setShowWithdrawalForm(false);
-        setWithdrawalForm({
-          phone_number: "",
-          network: "mtn",
-          amount: 0,
-        });
-        // Refresh referral data to update balance
+        setWithdrawalForm(emptyWithdrawalForm());
         await fetchReferralData();
         setTimeout(() => setWithdrawalSuccess(false), 5000);
       } else {
@@ -163,9 +176,7 @@ const Referral = () => {
       <AppLayout>
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <p className="text-destructive mb-4">
-              Failed to load referral data
-            </p>
+            <p className="text-destructive mb-4">Failed to load referral data</p>
             <Button onClick={() => navigate("/dashboard")}>Go Back</Button>
           </div>
         </div>
@@ -173,36 +184,37 @@ const Referral = () => {
     );
   }
 
+  const minWithdrawal = referralData.min_withdrawal_amount || 1000;
+  const rewardAmount = referralData.reward_amount || 500;
+
   return (
     <AppLayout>
       <div className="w-full">
         <div className="max-w-5xl mx-auto">
-          {/* Success Message */}
           {withdrawalSuccess && (
             <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-green-600" />
               <p className="text-green-800">
-                Withdrawal request submitted successfully! Your credit will be
-                credited to your phone number shortly.
+                Withdrawal request submitted. We will pay into your bank account
+                once an admin processes it.
               </p>
             </div>
           )}
 
-          {/* Credit Balance Card */}
           <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-background border rounded-lg p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Wallet className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Credit Balance
+                    Available Balance
                   </p>
                   <p className="text-3xl font-bold">
                     ₦{referralData?.credit_balance?.toLocaleString() || 0}
                   </p>
                 </div>
               </div>
-              {referralData.credit_balance >= (referralData.min_withdrawal_amount || 1000) && (
+              {referralData.credit_balance >= minWithdrawal && (
                 <Button
                   onClick={() => setShowWithdrawalForm(true)}
                   variant="outline"
@@ -211,19 +223,20 @@ const Referral = () => {
                 </Button>
               )}
             </div>
-            {referralData.credit_balance < (referralData.min_withdrawal_amount || 1000) && (
+            {referralData.credit_balance < minWithdrawal && (
               <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
                   <p className="text-sm text-yellow-800">
-                    Minimum withdrawal amount is ₦{(referralData.min_withdrawal_amount || 1000).toLocaleString()}. Refer more friends to increase your balance!
+                    Minimum withdrawal amount is ₦
+                    {minWithdrawal.toLocaleString()}. Refer more friends to
+                    increase your balance!
                   </p>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Referral Code Card */}
           <div className="bg-card border rounded-lg p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">Your Referral Code</h2>
             <div className="flex items-center gap-3 mb-4">
@@ -251,7 +264,6 @@ const Referral = () => {
             </Button>
           </div>
 
-          {/* Statistics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-card border rounded-lg p-4 text-center">
               <Users className="h-8 w-8 text-primary mx-auto mb-2" />
@@ -277,13 +289,13 @@ const Referral = () => {
             <div className="bg-card border rounded-lg p-4 text-center">
               <Wallet className="h-8 w-8 text-primary mx-auto mb-2" />
               <p className="text-2xl font-bold">
-                ₦{referralData?.statistics?.total_rewards?.toLocaleString() || 0}
+                ₦
+                {referralData?.statistics?.total_rewards?.toLocaleString() || 0}
               </p>
               <p className="text-sm text-muted-foreground">Total Rewards</p>
             </div>
           </div>
 
-          {/* How It Works */}
           <div className="bg-card border rounded-lg p-6 mb-6">
             <h3 className="text-lg font-semibold mb-4">How It Works</h3>
             <div className="space-y-4">
@@ -315,9 +327,12 @@ const Referral = () => {
                   3
                 </div>
                 <div>
-                  <p className="font-medium">Earn ₦500 per referral</p>
+                  <p className="font-medium">
+                    Earn ₦{rewardAmount.toLocaleString()} per referral
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    You get ₦500 worth of credit for each successful referral
+                    You earn ₦{rewardAmount.toLocaleString()} when they
+                    subscribe
                   </p>
                 </div>
               </div>
@@ -326,9 +341,10 @@ const Referral = () => {
                   4
                 </div>
                 <div>
-                  <p className="font-medium">Withdraw your credits</p>
+                  <p className="font-medium">Withdraw to your bank</p>
                   <p className="text-sm text-muted-foreground">
-                    Withdraw your credits to your phone number (minimum ₦{(referralData.min_withdrawal_amount || 1000).toLocaleString()})
+                    Submit your bank details once you reach ₦
+                    {minWithdrawal.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -340,20 +356,27 @@ const Referral = () => {
               <h3 className="text-lg font-semibold mb-4">Recent Withdrawals</h3>
               <div className="space-y-3">
                 {referralData.recent_withdrawals.map((withdrawal) => (
-                  <div key={withdrawal.uuid} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div
+                    key={withdrawal.uuid}
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                  >
                     <div>
-                      <p className="font-semibold">₦{withdrawal.amount.toLocaleString()}</p>
+                      <p className="font-semibold">
+                        ₦{withdrawal.amount.toLocaleString()}
+                      </p>
                       <p className="text-sm text-muted-foreground">
-                        {withdrawal.phone_number} · {withdrawal.network.toUpperCase()}
+                        {formatWithdrawalDestination(withdrawal)}
                       </p>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
-                      withdrawal.status === 'paid'
-                        ? 'bg-green-100 text-green-700'
-                        : withdrawal.status === 'rejected'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                    }`}>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
+                        withdrawal.status === "paid"
+                          ? "bg-green-100 text-green-700"
+                          : withdrawal.status === "rejected"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-yellow-100 text-yellow-700"
+                      }`}
+                    >
                       {withdrawal.status}
                     </span>
                   </div>
@@ -362,7 +385,6 @@ const Referral = () => {
             </div>
           )}
 
-          {/* Recent Referrals */}
           {referralData.recent_referrals.length > 0 && (
             <div className="bg-card border rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-4">Recent Referrals</h3>
@@ -419,11 +441,10 @@ const Referral = () => {
         </div>
       </div>
 
-      {/* Withdrawal Modal */}
       {showWithdrawalForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-background rounded-lg max-w-md w-full p-6">
-            <h3 className="text-xl font-semibold mb-4">Withdraw Credits</h3>
+            <h3 className="text-xl font-semibold mb-4">Withdraw to Bank</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
@@ -437,46 +458,52 @@ const Referral = () => {
               </div>
 
               <Input
-                label="Phone Number"
-                type="tel"
-                placeholder="08012345678"
-                value={withdrawalForm.phone_number}
+                label="Account Name"
+                type="text"
+                placeholder="Name on the account"
+                value={withdrawalForm.account_name}
                 onChange={(e) =>
                   setWithdrawalForm({
                     ...withdrawalForm,
-                    phone_number: e.target.value,
+                    account_name: e.target.value,
                   })
                 }
-                leftIcon={<Phone className="h-4 w-4" />}
               />
 
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Network Provider
-                </label>
-                <select
-                  value={withdrawalForm.network}
-                  onChange={(e) =>
-                    setWithdrawalForm({
-                      ...withdrawalForm,
-                      network: e.target.value as WithdrawalRequest["network"],
-                    })
-                  }
-                  className="w-full border rounded-md p-3 bg-background"
-                >
-                  {NETWORKS.map((network) => (
-                    <option key={network.value} value={network.value}>
-                      {network.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Input
+                label="Account Number"
+                type="text"
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="0123456789"
+                value={withdrawalForm.account_number}
+                onChange={(e) =>
+                  setWithdrawalForm({
+                    ...withdrawalForm,
+                    account_number: e.target.value.replace(/\D/g, "").slice(0, 10),
+                  })
+                }
+              />
+
+              <Input
+                label="Bank Name"
+                type="text"
+                placeholder="e.g. GTBank, Access Bank"
+                value={withdrawalForm.bank_name}
+                onChange={(e) =>
+                  setWithdrawalForm({
+                    ...withdrawalForm,
+                    bank_name: e.target.value,
+                  })
+                }
+                leftIcon={<Building2 className="h-4 w-4" />}
+              />
 
               <Input
                 label="Amount (₦)"
                 type="number"
-                placeholder={`${referralData.min_withdrawal_amount || 1000}`}
-                min={referralData.min_withdrawal_amount || 1000}
+                placeholder={`${minWithdrawal}`}
+                min={minWithdrawal}
                 max={referralData.credit_balance}
                 value={withdrawalForm.amount || ""}
                 onChange={(e) =>
@@ -492,11 +519,7 @@ const Referral = () => {
                   variant="outline"
                   onClick={() => {
                     setShowWithdrawalForm(false);
-                    setWithdrawalForm({
-                      phone_number: "",
-                      network: "mtn",
-                      amount: 0,
-                    });
+                    setWithdrawalForm(emptyWithdrawalForm());
                   }}
                   className="flex-1"
                   disabled={withdrawing}
@@ -511,10 +534,10 @@ const Referral = () => {
                   {withdrawing ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
+                      Submitting...
                     </>
                   ) : (
-                    "Withdraw"
+                    "Submit Request"
                   )}
                 </Button>
               </div>

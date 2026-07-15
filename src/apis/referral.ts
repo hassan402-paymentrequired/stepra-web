@@ -35,8 +35,11 @@ export interface ReferralData {
 export interface ReferralWithdrawal {
   uuid: string;
   amount: number;
-  phone_number: string;
-  network: string;
+  account_name: string | null;
+  account_number: string | null;
+  bank_name: string | null;
+  phone_number: string | null;
+  network: string | null;
   status: 'pending' | 'paid' | 'rejected';
   admin_notes: string | null;
   processed_at: string | null;
@@ -44,8 +47,9 @@ export interface ReferralWithdrawal {
 }
 
 export interface WithdrawalRequest {
-  phone_number: string;
-  network: 'mtn' | 'airtel' | 'glo' | '9mobile';
+  account_name: string;
+  account_number: string;
+  bank_name: string;
   amount: number;
 }
 
@@ -53,11 +57,7 @@ export interface WithdrawalResponse {
   success: boolean;
   message: string;
   data?: {
-    transaction_id: string;
-    amount: number;
-    phone_number: string;
-    network: string;
-    status: string;
+    withdrawal: ReferralWithdrawal;
   };
 }
 
@@ -91,3 +91,15 @@ export const requestWithdrawal = async (
   const response = await api.post('/referrals/withdraw', data);
   return response.data;
 };
+
+export function formatWithdrawalDestination(withdrawal: ReferralWithdrawal): string {
+  if (withdrawal.account_number && withdrawal.bank_name) {
+    return `${withdrawal.account_name || 'Account'} · ${withdrawal.bank_name} · ${withdrawal.account_number}`;
+  }
+
+  if (withdrawal.phone_number) {
+    return `${withdrawal.phone_number}${withdrawal.network ? ` · ${withdrawal.network.toUpperCase()}` : ''}`;
+  }
+
+  return 'Payout details unavailable';
+}
