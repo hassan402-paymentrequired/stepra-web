@@ -7,6 +7,8 @@ import { WaitlistModal } from "@/components/landing/WaitlistModal";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import type { WaitlistPlatform } from "@/apis/waitlist";
 
+const APP_STORE_URL = "https://apps.apple.com/us/app/stepra-prep/id6789680121";
+
 const Landing = () => {
   const [waitlistPlatform, setWaitlistPlatform] = useState<WaitlistPlatform | null>(null);
 
@@ -52,7 +54,7 @@ const Landing = () => {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
-            <StoreBadge platform="ios" onClick={() => setWaitlistPlatform("ios")} />
+            <StoreBadge platform="ios" href={APP_STORE_URL} />
             <StoreBadge platform="android" onClick={() => setWaitlistPlatform("android")} />
           </div>
         </div>

@@ -4,7 +4,8 @@ type StorePlatform = 'ios' | 'android';
 
 interface StoreBadgeProps {
   platform: StorePlatform;
-  onClick: () => void;
+  href?: string;
+  onClick?: () => void;
   className?: string;
 }
 
@@ -16,21 +17,14 @@ function AppleIcon({ className }: { className?: string }) {
   );
 }
 
-export function StoreBadge({ platform, onClick, className }: StoreBadgeProps) {
-  const isIos = platform === 'ios';
+const badgeClassName =
+  'inline-flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 ' +
+  '!text-white shadow-sm transition-all hover:scale-[1.02] hover:shadow-md hover:bg-zinc-900 ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
+function BadgeContent({ isIos }: { isIos: boolean }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'inline-flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5',
-        '!text-white shadow-sm transition-all hover:scale-[1.02] hover:shadow-md hover:bg-zinc-900',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-        className
-      )}
-      aria-label={isIos ? 'Download on the App Store — coming soon' : 'Get it on Google Play — coming soon'}
-    >
+    <>
       {isIos ? (
         <AppleIcon className="h-7 w-7 shrink-0" />
       ) : (
@@ -54,6 +48,38 @@ export function StoreBadge({ platform, onClick, className }: StoreBadgeProps) {
           {isIos ? 'App Store' : 'Google Play'}
         </span>
       </span>
+    </>
+  );
+}
+
+export function StoreBadge({ platform, href, onClick, className }: StoreBadgeProps) {
+  const isIos = platform === 'ios';
+  const ariaLabel = isIos
+    ? 'Download on the App Store'
+    : 'Get it on Google Play — coming soon';
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(badgeClassName, className)}
+        aria-label={ariaLabel}
+      >
+        <BadgeContent isIos={isIos} />
+      </a>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(badgeClassName, className)}
+      aria-label={ariaLabel}
+    >
+      <BadgeContent isIos={isIos} />
     </button>
   );
 }
