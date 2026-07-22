@@ -27,5 +27,7 @@ export function useLeaderboard(
         currentUser: response.data.current_user,
       };
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }

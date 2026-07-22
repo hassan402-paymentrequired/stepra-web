@@ -132,14 +132,15 @@ const Subscription = () => {
         let statusResponse = await getSubscriptionStatus();
         if (
           statusResponse.success &&
-          statusResponse.data?.needs_device_binding &&
-          !statusResponse.data.has_active_subscription
+          !statusResponse.data?.has_active_subscription &&
+          (statusResponse.data?.needs_device_binding ||
+            statusResponse.data?.other_devices_active)
         ) {
           try {
             await registerSubscriptionDevice();
             statusResponse = await getSubscriptionStatus();
           } catch {
-            // Another device may have claimed it.
+            // Another device may have claimed it, or reclaim window expired.
           }
         }
 
@@ -174,18 +175,40 @@ const Subscription = () => {
     [clearPendingReference, refetchUser, searchParams, setSearchParams]
   );
 
-  // Legacy subscriptions may be active but unbound — link this device once on load.
+  const deviceBindAttemptedRef = useRef(false);
+
+  // Legacy / recently-lost-web-device subscriptions — link this browser once on load.
   useEffect(() => {
-    if (!status?.needs_device_binding || loading || processing) {
+    if (
+      loading ||
+      processing ||
+      status?.has_active_subscription ||
+      deviceBindAttemptedRef.current
+    ) {
       return;
     }
 
+    const shouldTryBind =
+      status?.needs_device_binding || status?.other_devices_active;
+
+    if (!shouldTryBind) {
+      return;
+    }
+
+    deviceBindAttemptedRef.current = true;
     registerSubscriptionDevice()
       .then(() => fetchData())
       .catch(() => {
-        // Binding may fail if another device already claimed the subscription.
+        // Binding may fail if reclaim window expired or another device claimed it.
       });
-  }, [status?.needs_device_binding, loading, processing, fetchData]);
+  }, [
+    status?.needs_device_binding,
+    status?.other_devices_active,
+    status?.has_active_subscription,
+    loading,
+    processing,
+    fetchData,
+  ]);
 
   // Handle Paystack redirect callback (?reference=xxx)
   useEffect(() => {
@@ -381,9 +404,10 @@ const Subscription = () => {
                 Multi-Device Subscription
               </h3>
               <p className="text-amber-700 text-sm">
-                You have an active subscription on another device. Stepra
-                subscriptions are bound per device. To use Stepra on this device
-                as well, you can purchase a new plan below.
+                You already have an active subscription, but it is linked to a
+                different browser or device. Use the same browser you subscribed
+                with. If you just paid and still see this, refresh this page —
+                we will try to link this browser automatically.
               </p>
             </div>
           )}

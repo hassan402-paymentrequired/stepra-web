@@ -7,8 +7,9 @@ import { getSubjects, startPracticeSession } from '@/apis/exam';
 import { useExamSelection } from '@/contexts/ExamSelectionContext';
 import { useExamRouteSlug } from '@/hooks/useExamRouteSlug';
 import { useSubscriptionGate } from '@/hooks/useSubscriptionGate';
-import { Check, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { EmptyStateCard } from '@/components/empty-state/EmptyStateCard';
+import { SubscriptionRequiredCard } from '@/components/subscription/subscription-required-card';
 import { getApiErrorMessage } from '@/utils';
 import type { AxiosError } from 'axios';
 import { toast } from 'sonner';
@@ -31,7 +32,12 @@ const JAMBPracticeQuestionsSelection = () => {
   const [showQuestionCountModal, setShowQuestionCountModal] = useState(false);
   const [currentSubjectForQuestionCount, setCurrentSubjectForQuestionCount] = useState<string | null>(null);
   const [startingExam, setStartingExam] = useState(false);
-  const { hasActiveSubscription, maxQuestionsPerSubject, loading: subscriptionLoading } = useSubscriptionGate();
+  const {
+    hasActiveSubscription,
+    otherDevicesActive,
+    maxQuestionsPerSubject,
+    loading: subscriptionLoading,
+  } = useSubscriptionGate();
 
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -235,14 +241,10 @@ const JAMBPracticeQuestionsSelection = () => {
     return (
       <AppLayout>
         <div className="max-w-md mx-auto">
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-6 text-center">
-            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-amber-600 dark:text-amber-400" />
-            <h2 className="text-xl font-bold mb-2">Subscription Required</h2>
-            <p className="text-muted-foreground mb-6">
-              You need an active subscription to access practice questions. Subscribe to unlock unlimited practice.
-            </p>
-            <Button onClick={() => navigate('/subscription')}>Subscribe Now</Button>
-          </div>
+          <SubscriptionRequiredCard
+            otherDevicesActive={otherDevicesActive}
+            description="You need an active subscription to access practice questions. Subscribe to unlock unlimited practice."
+          />
         </div>
       </AppLayout>
     );

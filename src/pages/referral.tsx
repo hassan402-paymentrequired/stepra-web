@@ -185,7 +185,7 @@ const Referral = () => {
   }
 
   const minWithdrawal = referralData.min_withdrawal_amount || 1000;
-  const rewardAmount = referralData.reward_amount || 500;
+  const rewardAmount = referralData.reward_amount || 1000;
 
   return (
     <AppLayout>

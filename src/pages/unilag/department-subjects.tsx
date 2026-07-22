@@ -11,10 +11,10 @@ import { useUser } from "@/lib/auth";
 import { useSubscriptionGate } from "@/hooks/useSubscriptionGate";
 import {
   ChevronDown,
-  AlertCircle,
   Loader2,
 } from "lucide-react";
 import { EmptyStateCard } from "@/components/empty-state/EmptyStateCard";
+import { SubscriptionRequiredCard } from "@/components/subscription/subscription-required-card";
 import { getApiErrorMessage } from "@/utils";
 import type { AxiosError } from "axios";
 import { useExamSelection } from "@/contexts/ExamSelectionContext";
@@ -41,7 +41,12 @@ const UnilagDepartmentSubjects = () => {
   const [showTestModal, setShowTestModal] = useState(false);
   const [showQuestionCountModal, setShowQuestionCountModal] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
-  const { hasActiveSubscription, maxQuestionsPerSubject, loading: subscriptionLoading } = useSubscriptionGate({ premiumLimit: 50 });
+  const {
+    hasActiveSubscription,
+    otherDevicesActive,
+    maxQuestionsPerSubject,
+    loading: subscriptionLoading,
+  } = useSubscriptionGate({ premiumLimit: 50 });
   const examLabel = selection.examTypeName || "UNILAG";
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -189,14 +194,10 @@ const UnilagDepartmentSubjects = () => {
     return (
       <AppLayout>
         <div className="max-w-md mx-auto">
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-6 text-center">
-            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-amber-600 dark:text-amber-400" />
-            <h2 className="text-xl font-bold mb-2">Subscription Required</h2>
-            <p className="text-muted-foreground mb-6">
-              You need an active subscription to access practice questions. Subscribe to unlock up to 50 questions per session.
-            </p>
-            <Button onClick={() => navigate('/subscription')}>Subscribe Now</Button>
-          </div>
+          <SubscriptionRequiredCard
+            otherDevicesActive={otherDevicesActive}
+            description="You need an active subscription to access practice questions. Subscribe to unlock up to 50 questions per session."
+          />
         </div>
       </AppLayout>
     );

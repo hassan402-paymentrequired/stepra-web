@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui";
 import {
@@ -227,6 +228,7 @@ interface ExamScreenActiveProps {
 
 const ExamScreenActive = ({ examSession, initialProgress: savedProgress }: ExamScreenActiveProps) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: user } = useUser();
 
   // Screenshot prevention hook
@@ -707,6 +709,8 @@ const ExamScreenActive = ({ examSession, initialProgress: savedProgress }: ExamS
         // Non-blocking
       }
 
+      void queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
+
       clearExamSession();
       clearExamProgress(examSession.attemptUuid);
       navigate("/exam/results", {
@@ -743,7 +747,7 @@ const ExamScreenActive = ({ examSession, initialProgress: savedProgress }: ExamS
       setLoading(false);
       setShowConfirmSubmitModal(false);
     }
-  }, [examSession, subjectsQuestions, navigate, submitAllAnswers]);
+  }, [examSession, subjectsQuestions, navigate, submitAllAnswers, queryClient]);
 
   const handleCompleteExam = useCallback(
     async (autoSubmit = false) => {
@@ -790,6 +794,7 @@ const ExamScreenActive = ({ examSession, initialProgress: savedProgress }: ExamS
       } catch {
         // Non-blocking
       }
+      void queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
       clearExamSession();
       clearExamProgress(examSession.attemptUuid);
 
@@ -809,7 +814,7 @@ const ExamScreenActive = ({ examSession, initialProgress: savedProgress }: ExamS
     } finally {
       setLoading(false);
     }
-  }, [examSession, navigate, submitAllAnswers]);
+  }, [examSession, navigate, submitAllAnswers, queryClient]);
 
   // Optimized auto-submit and exit warning system
   useEffect(() => {

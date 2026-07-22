@@ -3,6 +3,7 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { isEmpty } from 'lodash';
 import { getSessionWithKey, setSessionWithValue } from './cookies';
 import { removeWithRedirect } from './auth';
+import { getDeviceId } from './device-id';
 
 const baseUrl = import.meta.env.VITE_BASE_URL;
 
@@ -39,14 +40,7 @@ instance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    let deviceId = localStorage.getItem('device_id');
-    if (!deviceId) {
-      deviceId = window.crypto && window.crypto.randomUUID
-        ? window.crypto.randomUUID()
-        : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('device_id', deviceId);
-    }
-    config.headers['X-Device-Id'] = deviceId;
+    config.headers['X-Device-Id'] = getDeviceId();
 
     return config;
   },

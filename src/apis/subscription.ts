@@ -92,7 +92,8 @@ export const getSubscriptionStatus = async (): Promise<{
   success: boolean;
   data: SubscriptionStatus;
 }> => {
-  const response = await api.get('/subscriptions/status');
+  // Cache-bust so an outdated service worker cannot serve a stale "unsubscribed" response.
+  const response = await api.get(`/subscriptions/status?_=${Date.now()}`);
   return response.data;
 };
 
