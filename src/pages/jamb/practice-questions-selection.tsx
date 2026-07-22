@@ -7,7 +7,7 @@ import { getSubjects, startPracticeSession } from '@/apis/exam';
 import { useExamSelection } from '@/contexts/ExamSelectionContext';
 import { useExamRouteSlug } from '@/hooks/useExamRouteSlug';
 import { useSubscriptionGate } from '@/hooks/useSubscriptionGate';
-import { Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { AlertCircle, Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { EmptyStateCard } from '@/components/empty-state/EmptyStateCard';
 import { SubscriptionRequiredCard } from '@/components/subscription/subscription-required-card';
 import { getApiErrorMessage } from '@/utils';
