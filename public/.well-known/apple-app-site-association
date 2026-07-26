@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "86GKXAHT39.com.oluwafemiomoope.stepra",
+        "paths": [
+          "/authenticate/register",
+          "/authenticate/register/*"
+        ]
+      }
+    ]
+  }
+}

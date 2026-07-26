@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router';
+import { useNavigate, Link, useSearchParams } from 'react-router';
 import { useRegister } from '@/lib/auth';
 import { Button, Input } from '@/components/ui';
 import { Mail, Lock, User, Gift, Eye, EyeOff } from 'lucide-react';
@@ -8,12 +8,15 @@ import { toast } from 'sonner';
 
 const Register = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const register = useRegister();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
-  const [referralCode, setReferralCode] = useState('');
+  const [referralCode, setReferralCode] = useState(
+    () => (searchParams.get('ref') || searchParams.get('referral_code') || '').trim()
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
