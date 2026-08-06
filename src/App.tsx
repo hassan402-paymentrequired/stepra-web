@@ -4,7 +4,6 @@ import AppProvider from './provider';
 import router from './router';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeColorMeta } from '@/components/theme/theme-color-meta';
-import { PwaManager } from '@/components/pwa/pwa-manager';
 
 function App() {
   return (
@@ -19,7 +18,6 @@ function App() {
         <RouterProvider router={router} />
       </Suspense>
       <ThemeColorMeta />
-      <PwaManager />
       <Toaster position="top-right" richColors closeButton />
     </AppProvider>
   );
