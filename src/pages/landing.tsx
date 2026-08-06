@@ -6,8 +6,7 @@ import { StoreBadge } from "@/components/landing/StoreBadge";
 import { WaitlistModal } from "@/components/landing/WaitlistModal";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import type { WaitlistPlatform } from "@/apis/waitlist";
-
-const APP_STORE_URL = "https://apps.apple.com/us/app/stepra-prep/id6789680121";
+import { APP_STORE_URL } from "@/lib/app-store";
 
 const Landing = () => {
   const [waitlistPlatform, setWaitlistPlatform] = useState<WaitlistPlatform | null>(null);

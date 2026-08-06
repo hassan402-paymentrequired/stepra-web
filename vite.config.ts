@@ -13,10 +13,31 @@ export default defineConfig(({ mode }) => {
     ? new RegExp(`^${apiOrigin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/`)
     : null
 
+  const wellKnownHeadersPlugin = {
+    name: "well-known-headers",
+    configureServer(server: { middlewares: { use: (fn: (req: any, res: any, next: () => void) => void) => void } }) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.startsWith("/.well-known/apple-app-site-association")) {
+          res.setHeader("Content-Type", "application/json")
+        }
+        next()
+      })
+    },
+    configurePreviewServer(server: { middlewares: { use: (fn: (req: any, res: any, next: () => void) => void) => void } }) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.startsWith("/.well-known/apple-app-site-association")) {
+          res.setHeader("Content-Type", "application/json")
+        }
+        next()
+      })
+    },
+  }
+
   return {
     plugins: [
       react(),
       tailwindcss(),
+      wellKnownHeadersPlugin,
       VitePWA({
         registerType: "prompt",
         includeAssets: [
@@ -59,24 +80,15 @@ export default defineConfig(({ mode }) => {
           globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
           importScripts: ["/push-sw.js"],
           navigateFallback: "/index.html",
-          navigateFallbackDenylist: [/^\/api/],
+          navigateFallbackDenylist: [/^\/api/, /^\/\.well-known\//],
           runtimeCaching: [
+            // Never cache authenticated API responses — subscription status is
+            // device-bound and a stale "unsubscribed" cache looks like a failed payment.
             ...(apiUrlPattern
               ? [
                   {
                     urlPattern: apiUrlPattern,
-                    handler: "NetworkFirst" as const,
-                    options: {
-                      cacheName: "stepra-api",
-                      networkTimeoutSeconds: 10,
-                      expiration: {
-                        maxEntries: 64,
-                        maxAgeSeconds: 5 * 60,
-                      },
-                      cacheableResponse: {
-                        statuses: [0, 200],
-                      },
-                    },
+                    handler: "NetworkOnly" as const,
                   },
                 ]
               : []),

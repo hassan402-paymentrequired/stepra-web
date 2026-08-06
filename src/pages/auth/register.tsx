@@ -5,10 +5,12 @@ import { Button, Input } from '@/components/ui';
 import { Mail, Lock, User, Gift, Eye, EyeOff } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils';
 import { toast } from 'sonner';
+import { ReferralOpenApp } from '@/components/auth/referral-open-app';
+import { isMobileUserAgent } from '@/lib/app-store';
 
 const Register = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const register = useRegister();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -28,6 +30,16 @@ const Register = () => {
     referralCode?: string;
     terms?: string;
   }>({});
+
+  const preferWeb = searchParams.get('web') === '1';
+  const showAppGate =
+    Boolean(referralCode) && isMobileUserAgent() && !preferWeb;
+
+  const continueOnWeb = () => {
+    const next = new URLSearchParams(searchParams);
+    next.set('web', '1');
+    setSearchParams(next, { replace: true });
+  };
 
   const validate = () => {
     const newErrors: {
@@ -83,7 +95,6 @@ const Register = () => {
 
       toast.success('Account created successfully');
 
-      // Redirect to email verification
       navigate('/authenticate/verify-email', { state: { email: email.trim() } });
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { errors?: Record<string, string[]> } } };
@@ -102,6 +113,15 @@ const Register = () => {
       }
     }
   };
+
+  if (showAppGate) {
+    return (
+      <ReferralOpenApp
+        referralCode={referralCode}
+        onContinueOnWeb={continueOnWeb}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">

@@ -32,7 +32,6 @@ export interface SubscriptionStatus {
 
 export interface InitializePaymentRequest {
   plan_uuid: string;
-  referral_code?: string;
 }
 
 export interface InitializePaymentResponse {

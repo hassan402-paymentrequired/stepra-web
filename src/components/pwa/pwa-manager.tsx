@@ -16,21 +16,5 @@ export function PwaManager() {
     },
   });
 
-  useEffect(() => {
-    if (!needRefresh || toastShown.current) return;
-
-    toastShown.current = true;
-    toast('Update available', {
-      description: 'A new version of Stepra is ready.',
-      duration: Infinity,
-      action: {
-        label: 'Reload',
-        onClick: () => {
-          void updateServiceWorker(true);
-        },
-      },
-    });
-  }, [needRefresh, updateServiceWorker]);
-
   return null;
 }
