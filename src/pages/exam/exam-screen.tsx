@@ -31,6 +31,8 @@ import { toast } from "sonner";
 import { promptPushAfterStreak } from "@/hooks/usePushNotifications";
 import { useScreenshotPrevention } from "@/hooks/useScreenshotPrevention";
 import { useUser } from "@/lib/auth";
+import { getSessionWithKey } from "@/lib/cookies";
+import { getDeviceId } from "@/lib/device-id";
 import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { ExamHeader } from "./components/ExamHeader";
 import { QuestionDisplay } from "./components/QuestionDisplay";
@@ -831,7 +833,6 @@ const ExamScreenActive = ({ examSession, initialProgress: savedProgress }: ExamS
         isSubmitting = true;
         autoSubmitRef.current = true;
 
-        // Use sendBeacon for reliable submission during page unload
         const completeData = {
           subjects: examSession.subjects?.map(subject => ({
             subject,
@@ -840,23 +841,23 @@ const ExamScreenActive = ({ examSession, initialProgress: savedProgress }: ExamS
           duration_minutes: examSession.timeMinutes,
         };
 
-        if (navigator.sendBeacon) {
-          const data = JSON.stringify(completeData);
-          navigator.sendBeacon(
-            `/api/exam-attempts/${examSession.attemptUuid}/complete`,
-            new Blob([data], { type: 'application/json' })
-          );
-        } else {
-          // Fallback for browsers without sendBeacon
-          fetch(`/api/exam-attempts/${examSession.attemptUuid}/complete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(completeData),
-            keepalive: true,
-          }).catch(error => {
-            console.error('Auto-complete failed:', error);
-          });
-        }
+        // sendBeacon can't carry the Authorization header this API requires,
+        // so it would silently 401 — use fetch with keepalive instead, which
+        // supports headers and is well-supported during unload in modern browsers.
+        const token = getSessionWithKey('token');
+        fetch(`${import.meta.env.VITE_BASE_URL}/exam-attempts/${examSession.attemptUuid}/complete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            'X-Device-Id': getDeviceId(),
+          },
+          body: JSON.stringify(completeData),
+          keepalive: true,
+        }).catch(error => {
+          console.error('Auto-complete failed:', error);
+        });
       }
 
       return message;
