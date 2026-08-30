@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui";
 import { Logo } from "@/components/logo";
@@ -6,10 +6,21 @@ import { StoreBadge } from "@/components/landing/StoreBadge";
 import { WaitlistModal } from "@/components/landing/WaitlistModal";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import type { WaitlistPlatform } from "@/apis/waitlist";
-import { APP_STORE_URL } from "@/lib/app-store";
+import { APP_STORE_URL, fetchAppAvailability } from "@/lib/app-store";
 
 const Landing = () => {
   const [waitlistPlatform, setWaitlistPlatform] = useState<WaitlistPlatform | null>(null);
+  const [androidStoreUrl, setAndroidStoreUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAppAvailability().then((data) => {
+      if (!cancelled) setAndroidStoreUrl(data.androidStoreUrl);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -54,7 +65,11 @@ const Landing = () => {
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
             <StoreBadge platform="ios" href={APP_STORE_URL} />
-            <StoreBadge platform="android" onClick={() => setWaitlistPlatform("android")} />
+            {androidStoreUrl ? (
+              <StoreBadge platform="android" href={androidStoreUrl} />
+            ) : (
+              <StoreBadge platform="android" onClick={() => setWaitlistPlatform("android")} />
+            )}
           </div>
         </div>
 

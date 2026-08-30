@@ -5,8 +5,10 @@ import { WaitlistModal } from '@/components/landing/WaitlistModal';
 import {
   APP_STORE_URL,
   buildAppRegisterDeepLink,
+  fetchAppAvailability,
   getMobilePlatform,
   getStoreUrlForPlatform,
+  type AppAvailability,
   type MobilePlatform,
 } from '@/lib/app-store';
 import type { WaitlistPlatform } from '@/apis/waitlist';
@@ -24,7 +26,20 @@ export function ReferralOpenApp({
 }: ReferralOpenAppProps) {
   const [platform] = useState<MobilePlatform>(() => getMobilePlatform());
   const [waitlistOpen, setWaitlistOpen] = useState(false);
-  const storeUrl = getStoreUrlForPlatform(platform);
+  const [availability, setAvailability] = useState<AppAvailability | undefined>();
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAppAvailability().then((data) => {
+      if (!cancelled) setAvailability(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const storeUrl = getStoreUrlForPlatform(platform, availability);
+  const androidAvailable = availability?.androidAvailable ?? false;
 
   useEffect(() => {
     const deepLink = buildAppRegisterDeepLink(referralCode);
@@ -65,8 +80,8 @@ export function ReferralOpenApp({
             <p className="text-muted-foreground">
               You were invited with referral code{' '}
               <span className="font-semibold text-foreground">{referralCode}</span>.
-              {platform === 'ios'
-                ? ' Opening the App Store if Stepra is not installed…'
+              {platform === 'ios' || (platform === 'android' && androidAvailable)
+                ? ' Opening the app if it’s not already installed…'
                 : ' The Android app is coming soon — join the waitlist or continue in your browser.'}
             </p>
           </div>
